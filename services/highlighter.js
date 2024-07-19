@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { pdfParse } from 'pdf-parse';
+import { extractCharacters } from './characterExtractor.js';
 
 export async function highlightPDF(inputPdfPath, outputPdfPath, characterName, highlightColor = rgb(1, 1, 0)) {
   const inputPdfBytes = fs.readFileSync(inputPdfPath);
