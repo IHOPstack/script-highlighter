@@ -1,0 +1,32 @@
+{
+  "name": "highlighter",
+  "version": "1.0.0",
+  "description": "highlights a script for a given character",
+  "main": "server.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "jest",
+    "start": "node server.js"
+  },
+  "author": "Devin Beckwith",
+  "license": "ISC",
+  "dependencies": {
+    "jest": "^29.7.0",
+    "pdfjs": "^2.5.3",
+    "pdfjs-dist": "^4.3.136"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.7",
+    "@babel/preset-env": "^7.24.7",
+    "babel-jest": "^29.7.0",
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.1"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.jsx?$": "babel-jest"
+    }
+  }
+}
