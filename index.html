@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Highlighter</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Script Highlighter</h1>
+            <div class="ad-space">Ad Space</div>
+        </header>
+        
+        <main>
+            <section class="info">
+                <div class="description">
+                    <p>Script Highlighter allows you to upload a script and download a copy with the lines of a chosen character highlighted.</p>
+                </div>
+                <div class="steps">
+                    <h2>How to use:</h2>
+                    <ol>
+                        <li>Click the 'Upload' button to select your script file (PDF only for now).</li>
+                        <li>Choose a character from the dropdown list.</li>
+                        <li>Click 'Highlight Script' to highlight the chosen character's lines.</li>
+                        <li>Review the highlighted script in the preview area.</li>
+                        <li>Click 'Download' to save the highlighted script to your device.</li>
+                    </ol>
+                </div>
+            </section>
+            
+            <div class="ad-space-horizontal">Ad Space</div>
+            
+            <section class="actions">
+                <button id="uploadBtn" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+                <select id="characterSelect">
+                    <option value="">Select Character</option>
+                </select>
+                <button id="highlightBtn" class="btn btn-secondary"><i class="fas fa-highlighter"></i> Highlight Script</button>
+            </section>
+            
+            <section class="preview">
+                <div id="previewArea">Highlighted script will appear here.</div>
+            </section>
+            
+            <section class="actions">
+                <button id="downloadBtn" class="btn btn-primary"><i class="fas fa-download"></i> Download</button>
+                <button id="editBtn" class="btn btn-tertiary"><i class="fas fa-pencil-alt"></i> Edit Highlights</button>
+            </section>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
