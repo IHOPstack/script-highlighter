@@ -1,10 +1,23 @@
-@import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=Roboto&display=swap');
+:root{
+    --background-color: #f6eee3;
+    --text-color: black;
+    --highlighter-yellow: #ffff00;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root{
+        --background-color: black;
+        --text-color: #f6eee3;
+    }
+}
 
 body {
     font-family: 'Roboto', sans-serif;
     line-height: 1.6;
     margin: 0;
     padding: 0;
+    background-color: var(--background-color);
+    color: var(--text-color);
 }
 
 .container {
@@ -20,10 +33,10 @@ header {
 }
 
 h1 {
-    font-family: 'Special Elite', cursive;
+    font-family: 'Courier New', Courier, monospace;
     text-transform: uppercase;
     color: black;
-    background-color: #ffff00;
+    background-color: var(--highlighter-yellow);
     padding: 10px;
     display: inline-block;
 }
@@ -35,6 +48,7 @@ h1 {
     display: flex;
     justify-content: center;
     align-items: center;
+    color: black;
 }
 
 .ad-space-horizontal {
@@ -45,6 +59,7 @@ h1 {
     justify-content: center;
     align-items: center;
     margin: 20px 0;
+    color: black;
 }
 
 .actions {
@@ -66,27 +81,29 @@ h1 {
 
 .btn-primary {
     background-color: #4CAF50;
-    color: white;
+    color: var(--text-color);
 }
 
-.btn-secondary {
-    background-color: #4CAF50;
-    color: white;
-    font-size: 14px;
-}
-
-.btn-tertiary {
-    background-color: #FFD700;
+.btn-highlight {
+    background-color: var(--highlighter-yellow);
     color: black;
     font-size: 14px;
 }
 
+.btn-tertiary {
+    background-color: red;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
 #characterSelect {
-    font-family: 'Special Elite', cursive;
+    font-family: 'Courier New', Courier, monospace;
     padding: 10px;
-    border: 2px solid black;
+    border: 2px solid var(--text-color);
     border-radius: 5px;
     font-size: 16px;
+    background-color: var(--background-color);
+    color: var(--text-color);
 }
 
 #previewArea {
