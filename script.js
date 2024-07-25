@@ -22,11 +22,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     const arrayBuffer = await file.arrayBuffer();
                     currentPdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
                     characters = await extractCharacters(arrayBuffer, window.pdfjsLib);
-                    console.log('Extracted characters:', characters);
                     populateCharacterList(characters);
-                    console.log('File uploaded:', file.name);
                 } catch (error) {
-                    console.error('Upload failed:', error);
                     alert('Upload failed. Please try again.');
                 }
             }
@@ -38,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedCharacter = characterSelect.value;
         if (selectedCharacter && currentPdfDoc) {
             try {
-                const highlightedPdfDoc = await highlightPDF(currentPdfDoc, selectedCharacter, PDFLib, pdfjsLib);
+                const highlightedPdfDoc = await highlightPDF(currentPdfDoc, selectedCharacter, PDFLib, pdfjsLib, selectedColor);
                 const pdfBytes = await highlightedPdfDoc.save();
                 const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
                 const pdfUrl = URL.createObjectURL(pdfBlob);
@@ -52,18 +49,50 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    downloadBtn.addEventListener('click', function() {
-        const iframe = previewArea.querySelector('iframe');
-        if (iframe) {
-            const link = document.createElement('a');
-            link.href = iframe.src;
-            link.download = 'highlighted_script.pdf';
-            link.click();
+    let selectedColor = {r: 1, g: 1, b: 0}; // Default yellow
+
+    const colorOptions = document.querySelectorAll('.color-option');
+    
+    colorOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            colorOptions.forEach(opt => opt.classList.remove('selected'));
+            this.classList.add('selected');
+            
+            const color = this.getAttribute('data-color');
+            switch(color) {
+                case 'yellow': selectedColor = {r: 1, g: 1, b: 0}; break;
+                case 'pink': selectedColor = {r: 1, g: 0.42, b: 1}; break;
+                case 'blue': selectedColor = {r: 0.1, g: 0.78, b: 1}; break;
+                case 'green': selectedColor = {r: 0.32, g: 1, b: 0}; break;
+                case 'orange': selectedColor = {r: 1, g: 0.61, b: 0}; break;
+                case 'purple': selectedColor = {r: 0.8, g: 0.37, b: 1}; break;
+            }
+            
+            highlightBtn.style.backgroundColor = `rgb(${selectedColor.r * 255}, ${selectedColor.g * 255}, ${selectedColor.b * 255})`;
+        });
+    });
+    
+    // Set default selected color
+    document.getElementById('yellow').classList.add('selected');
+        
+    highlightBtn.addEventListener('click', async function() {
+        const selectedCharacter = characterSelect.value;
+        if (selectedCharacter && currentPdfDoc) {
+            try {
+                const highlightedPdfDoc = await highlightPDF(currentPdfDoc, selectedCharacter, PDFLib, pdfjsLib, selectedColor);
+                const pdfBytes = await highlightedPdfDoc.save();
+                const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const pdfUrl = URL.createObjectURL(pdfBlob);
+                previewArea.innerHTML = `<iframe src="${pdfUrl}" width="100%" height="500px"></iframe>`;
+            } catch (error) {
+                console.error('Highlighting failed:', error);
+                alert('Highlighting failed. Please try again.');
+            }
         } else {
-            alert('Please highlight a script first.');
+            alert('Please select a character and upload a script first.');
         }
     });
-
+    
     editBtn.addEventListener('click', async function() {
         if (currentPdfDoc && characterSelect.value) {
             try {

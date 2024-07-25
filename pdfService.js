@@ -43,7 +43,7 @@ export async function extractCharacters(pdfBuffer, pdfjsLib) {
     return Array.from(characters).sort();
 }
 
-export async function highlightPDF(pdfDoc, characterName, PDFLib, pdfjsLib, highlightColor = { r: 1, g: 1, b: 0 }) {
+export async function highlightPDF(pdfDoc, characterName, PDFLib, pdfjsLib, highlightColor) {
     const pdfBytes = await pdfDoc.save();
     const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
     const pdf = await loadingTask.promise;
@@ -58,8 +58,6 @@ export async function highlightPDF(pdfDoc, characterName, PDFLib, pdfjsLib, high
         const { width, height } = page.getSize();
         
         let isCharacterSpeaking = false;
-
-        console.log(`Page ${i} - Width: ${width}, Height: ${height}`);
 
         // Sort items from top to bottom
         const sortedItems = textContent.items.sort((a, b) => b.transform[5] - a.transform[5]);
@@ -86,7 +84,6 @@ export async function highlightPDF(pdfDoc, characterName, PDFLib, pdfjsLib, high
                     continue;
                 } else if (!/\w/.test(text)) {
                     isCharacterSpeaking = false;
-                    console.log('Action line, stop highlighting');
                 } else {
                     const rect = {
                         x: item.transform[4],
@@ -94,7 +91,6 @@ export async function highlightPDF(pdfDoc, characterName, PDFLib, pdfjsLib, high
                         width: item.width,
                         height: item.height,
                     };
-                    console.log(`Highlighting rectangle: (${rect.x}, ${rect.y}), ${rect.width}x${rect.height}`);
                     page.drawRectangle({
                         ...rect,
                         color: PDFLib.rgb(highlightColor.r, highlightColor.g, highlightColor.b),

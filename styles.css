@@ -62,12 +62,6 @@ h1 {
     color: black;
 }
 
-.actions {
-    display: flex;
-    gap: 10px;
-    margin: 20px 0;
-}
-
 .btn {
     padding: 10px 20px;
     border: none;
@@ -82,12 +76,6 @@ h1 {
 .btn-primary {
     background-color: #4CAF50;
     color: var(--text-color);
-}
-
-.btn-highlight {
-    background-color: var(--highlighter-yellow);
-    color: black;
-    font-size: 14px;
 }
 
 .btn-tertiary {
@@ -112,4 +100,64 @@ h1 {
     min-height: 300px;
     max-height: 500px;
     overflow-y: auto;
+}
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* This adds space between all child elements */
+}
+
+.color-options {
+    display: flex;
+    gap: 5px;
+}
+
+.color-option {
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    position: relative;
+    padding: 0;
+}
+
+.color-option i {
+    font-size: 24px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.color-option.selected::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border: 2px solid;
+    border-radius: 50%;
+}
+
+/* Updated Sharpie-like fluorescent colors */
+#yellow i { color: #ffff00; }
+#pink i { color: #ff6bff; }
+#blue i { color: #1ac7ff; }
+#green i { color: #51ff00; }
+#orange i { color: #ff9b00; }
+#purple i { color: #cb5eff; }
+
+#yellow.selected::after { border-color: #ffff00; }
+#pink.selected::after { border-color: #ff6bff; }
+#blue.selected::after { border-color: #1ac7ff; }
+#green.selected::after { border-color: #51ff00; }
+#orange.selected::after { border-color: #ff9b00; }
+#purple.selected::after { border-color: #cb5eff; }
+
+.btn-highlight {
+    background-color: var(--highlighter-yellow);
+    color: black;
+    font-size: 14px;
 }
