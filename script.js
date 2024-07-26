@@ -51,10 +51,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     highlightBtn.addEventListener('click', async function() {
-        const characters = characterSets.filter(set => set.character).map(set => ({
-            name: set.character,
-            color: HIGHLIGHT_COLORS[set.color]['rgb']
-        }));
+        const characters = characterSets.filter(set => set.character).map(set => {
+            // Check if the color exists in HIGHLIGHT_COLORS, if not use yellow as default
+            const colorName = HIGHLIGHT_COLORS.hasOwnProperty(set.color) ? set.color : 'yellow';
+            return {
+                name: set.character,
+                color: HIGHLIGHT_COLORS[colorName].rgb
+            };
+        });
+        
+        console.log('Characters to highlight:', characters);  // For debugging
         
         if (characters.length > 0 && currentPdfDoc) {
             try {
@@ -62,7 +68,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 const pdfBytes = await highlightedPdfDoc.save();
                 const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
                 const pdfUrl = URL.createObjectURL(pdfBlob);
+                
+                // Log for debugging
+                console.log('PDF URL created:', pdfUrl);
+                
+                // Update the preview area
+                const previewArea = document.getElementById('previewArea');
                 previewArea.innerHTML = `<iframe src="${pdfUrl}" width="100%" height="500px"></iframe>`;
+                
+                // Log for debugging
+                console.log('Preview area updated');
             } catch (error) {
                 console.error('Highlighting failed:', error);
                 alert('Highlighting failed. Please try again.');
@@ -71,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please select at least one character and upload a script first.');
         }
     });
-            
+                
     let selectedColor = {r: 1, g: 1, b: 0}; // Default yellow
 
     const colorOptions = document.querySelectorAll('.color-option');
@@ -100,7 +115,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
 
     function createCharacterSet(character = '', colorName = 'yellow') {
-        const characterSet = document.createElement('div');
+        // Ensure colorName is valid
+        if (!HIGHLIGHT_COLORS.hasOwnProperty(colorName)) {
+            colorName = 'yellow';  // Default to yellow if an invalid color is provided
+        }
+            const characterSet = document.createElement('div');
         characterSet.className = 'character-set';
     
         const select = document.createElement('select');
@@ -186,12 +205,17 @@ document.addEventListener('DOMContentLoaded', function() {
             characterSet.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
             colorOption.classList.add('selected');
             
-            const color = colorOption.getAttribute('data-color');
-            characterSets[index].color = getColorRGB(color);
-            updateHighlightButtonColor();
+            const colorName = colorOption.getAttribute('data-color');
+            if (HIGHLIGHT_COLORS.hasOwnProperty(colorName)) {
+                characterSets[index].color = colorName;
+                updateHighlightButtonColor();
+                console.log('characerSets after color selection', characterSets)
+            } else {
+                console.error(`Invalid color selected: ${colorName}`);
+            }
         }
     });
-            
+                
     // Event delegation for character selection
     characterContainer.addEventListener('change', (e) => {
         if (e.target.classList.contains('characterSelect')) {

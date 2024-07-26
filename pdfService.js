@@ -66,13 +66,11 @@ export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib) {
 
             if (!text) continue;
 
-            console.log(`Text: "${text}", Position: (${item.transform[4]}, ${item.transform[5]}), Size: ${item.width}x${item.height}`);
 
             // Check if this text is a character name
             const matchingCharacter = characters.find(char => char.name.toUpperCase() === text.toUpperCase());
             if (matchingCharacter) {
                 speakingCharacters.add(matchingCharacter);
-                console.log(`Character ${matchingCharacter.name} starts speaking`);
                 continue;
             }
 
@@ -80,9 +78,7 @@ export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib) {
             for (const character of speakingCharacters) {
                 if (text.toUpperCase() === text && text.length > 1) {
                     speakingCharacters.delete(character);
-                    console.log(`Character ${character.name} stops speaking`);
                 } else if (text.startsWith("(") && text.endsWith(")")) {
-                    console.log('Parenthetical, skipping');
                     continue;
                 } else if (!/\w/.test(text)) {
                     speakingCharacters.delete(character);
@@ -93,6 +89,7 @@ export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib) {
                         width: item.width,
                         height: item.height,
                     };
+                    console.log('Character and color before highlighting:', character, character.color)
                     page.drawRectangle({
                         ...rect,
                         color: PDFLib.rgb(character.color.r, character.color.g, character.color.b),
@@ -105,7 +102,6 @@ export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib) {
                 const nextItem = sortedItems[sortedItems.indexOf(item) + 1];
                 if (Math.abs(nextItem.transform[5] - item.transform[5]) > item.height) {
                     speakingCharacters.clear();
-                    console.log('New line detected, stop highlighting for all characters');
                 }
             }
         }
