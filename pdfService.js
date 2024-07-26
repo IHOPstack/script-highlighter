@@ -113,6 +113,7 @@ export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib) {
 
     return newPdfDoc;
 }
+
 export async function generateHeatMap(pdfDoc, characterName, PDFLib, pdfjsLib) {
     const copiedPdfDoc = await PDFLib.PDFDocument.create();
     const pages = await copiedPdfDoc.copyPages(pdfDoc, pdfDoc.getPageIndices());
