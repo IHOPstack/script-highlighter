@@ -1,5 +1,30 @@
 import { extractCharacters, highlightPDF, generateHeatMap } from './pdfService.js';
 
+const characterSetManager = {
+    sets: [],
+    
+    addSet(character = '', color = 'yellow') {
+        this.sets.push({ character, color });
+        this.updateUI();
+    },
+    
+    removeSet(index) {
+        if (this.sets.length > 1) {
+            this.sets.splice(index, 1);
+            this.updateUI();
+        }
+    },
+    
+    updateSet(index, character, color) {
+        this.sets[index] = { character, color };
+        this.updateUI();
+    },
+    
+    updateUI() {
+        // This method will be defined later to update the UI based on the current state
+    }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     const HIGHLIGHT_COLORS = {
         yellow: { hex: '#ffff00', rgb: {r: 1, g: 1, b: 0} },
@@ -15,6 +40,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const previewArea = document.getElementById('previewArea');
     const downloadBtn = document.getElementById('downloadBtn');
     const editBtn = document.getElementById('editBtn');
+    characterSetManager.addSet();  // Add the original set
+    characterSetManager.updateUI();  // Initial UI update
+
     
     // Single source of truth for character data
     let currentPdfDoc = null;
@@ -51,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     highlightBtn.addEventListener('click', async function() {
-        const characters = characterSets.filter(set => set.character).map(set => ({
+        const characters = characterSetManager.sets.filter(set => set.character).map(set => ({
             name: set.character,
             color: HIGHLIGHT_COLORS[set.color].rgb
         }));
@@ -82,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please select at least one character and upload a script first.');
         }
     });
-                    
+                        
     let selectedColor = {r: 1, g: 1, b: 0}; // Default yellow
 
     const colorOptions = document.querySelectorAll('.color-option');
@@ -110,13 +138,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('yellow').classList.add('selected');
         
 
-    function createCharacterSet(character = '', colorName = 'yellow') {
-        // Ensure colorName is valid
-        if (!HIGHLIGHT_COLORS.hasOwnProperty(colorName)) {
-            colorName = 'yellow';  // Default to yellow if an invalid color is provided
-        }
-            const characterSet = document.createElement('div');
+    function createCharacterSetElement(index, character = '', color = 'yellow') {
+        const characterSet = document.createElement('div');
         characterSet.className = 'character-set';
+        characterSet.dataset.index = index;
     
         const select = document.createElement('select');
         select.className = 'characterSelect';
@@ -125,32 +150,44 @@ document.addEventListener('DOMContentLoaded', function() {
             const option = document.createElement('option');
             option.value = char;
             option.textContent = char;
+            if (char === character) option.selected = true;
             select.appendChild(option);
         });
     
         const colorOptions = document.createElement('div');
         colorOptions.className = 'color-options';
-        Object.keys(HIGHLIGHT_COLORS).forEach(color => {
+        Object.keys(HIGHLIGHT_COLORS).forEach(colorName => {
             const button = document.createElement('button');
-            button.className = `color-option ${color === colorName ? 'selected' : ''}`;
-            button.id = color;
-            button.setAttribute('data-color', color);
+            button.className = `color-option ${colorName === color ? 'selected' : ''}`;
+            button.setAttribute('data-color', colorName);
             button.innerHTML = '<i class="fas fa-highlighter"></i>';
-            button.style.color = HIGHLIGHT_COLORS[color].hex;
+            button.style.color = HIGHLIGHT_COLORS[colorName].hex;
             colorOptions.appendChild(button);
         });
-            
-        const removeBtn = document.createElement('button');
-        removeBtn.className = 'remove-character-btn';
-        removeBtn.textContent = 'Remove';
-        removeBtn.addEventListener('click', () => removeCharacterSet(characterSet));
+    
+        if (index > 0) {  // Don't add remove button to the original set
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-character-btn';
+            removeBtn.textContent = 'Remove';
+            removeBtn.addEventListener('click', () => characterSetManager.removeSet(index));
+            characterSet.appendChild(removeBtn);
+        }
     
         characterSet.appendChild(select);
         characterSet.appendChild(colorOptions);
-        characterSet.appendChild(removeBtn);
-        
+    
         return characterSet;
     }
+    
+    characterSetManager.updateUI = function() {
+        const container = document.getElementById('characterContainer');
+        container.innerHTML = '';
+        this.sets.forEach((set, index) => {
+            container.appendChild(createCharacterSetElement(index, set.character, set.color));
+        });
+        updateHighlightButtonColor();
+    };
+    
 
     function updateCharacterSelects() {
         const selects = document.querySelectorAll('.characterSelect');
@@ -186,39 +223,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const characterContainer = document.getElementById('characterContainer');
     
     addCharacterBtn.addEventListener('click', () => {
-        const newSet = createCharacterSet();
-        characterContainer.insertBefore(newSet, characterContainer.firstChild);
-        characterSets.push({ character: '', color: 'yellow' });
+        characterSetManager.addSet();
     });
+    
                     
     // Event delegation for color selection
     characterContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('color-option') || e.target.closest('.color-option')) {
             const colorOption = e.target.classList.contains('color-option') ? e.target : e.target.closest('.color-option');
             const characterSet = colorOption.closest('.character-set');
-            const index = Array.from(document.querySelectorAll('.character-set')).indexOf(characterSet);
-            
-            characterSet.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
-            colorOption.classList.add('selected');
-            
-            const colorName = colorOption.getAttribute('data-color');
-            if (HIGHLIGHT_COLORS.hasOwnProperty(colorName)) {
-                characterSets[index].color = colorName;
-                updateHighlightButtonColor();
-                console.log('characterSets after color selection', characterSets);
-            } else {
-                console.error(`Invalid color selected: ${colorName}`);
-            }
+            const index = parseInt(characterSet.dataset.index);
+            const character = characterSet.querySelector('.characterSelect').value;
+            const color = colorOption.dataset.color;
+            characterSetManager.updateSet(index, character, color);
         }
     });
+    
                     
     // Event delegation for character selection
     characterContainer.addEventListener('change', (e) => {
         if (e.target.classList.contains('characterSelect')) {
-            const index = Array.from(document.querySelectorAll('.character-set')).indexOf(e.target.closest('.character-set'));
-            characterSets[index].character = e.target.value;
+            const characterSet = e.target.closest('.character-set');
+            const index = parseInt(characterSet.dataset.index);
+            const color = characterSet.querySelector('.color-option.selected').dataset.color;
+            characterSetManager.updateSet(index, e.target.value, color);
         }
     });
+    
                         
     editBtn.addEventListener('click', async function() {
         if (currentPdfDoc && characterSelect.value) {
