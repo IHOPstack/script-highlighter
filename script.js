@@ -51,16 +51,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     highlightBtn.addEventListener('click', async function() {
-        const characters = characterSets.filter(set => set.character).map(set => {
-            // Check if the color exists in HIGHLIGHT_COLORS, if not use yellow as default
-            const colorName = HIGHLIGHT_COLORS.hasOwnProperty(set.color) ? set.color : 'yellow';
-            return {
-                name: set.character,
-                color: HIGHLIGHT_COLORS[colorName].rgb
-            };
-        });
+        const characters = characterSets.filter(set => set.character).map(set => ({
+            name: set.character,
+            color: HIGHLIGHT_COLORS[set.color].rgb
+        }));
         
-        console.log('Characters to highlight:', characters);  // For debugging
+        console.log('Characters to highlight:', characters);
         
         if (characters.length > 0 && currentPdfDoc) {
             try {
@@ -86,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please select at least one character and upload a script first.');
         }
     });
-                
+                    
     let selectedColor = {r: 1, g: 1, b: 0}; // Default yellow
 
     const colorOptions = document.querySelectorAll('.color-option');
@@ -192,9 +188,9 @@ document.addEventListener('DOMContentLoaded', function() {
     addCharacterBtn.addEventListener('click', () => {
         const newSet = createCharacterSet();
         characterContainer.insertBefore(newSet, characterContainer.firstChild);
-        characterSets.unshift({ character: '', color: {r: 1, g: 1, b: 0} });
+        characterSets.push({ character: '', color: 'yellow' });
     });
-                
+                    
     // Event delegation for color selection
     characterContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('color-option') || e.target.closest('.color-option')) {
@@ -209,13 +205,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (HIGHLIGHT_COLORS.hasOwnProperty(colorName)) {
                 characterSets[index].color = colorName;
                 updateHighlightButtonColor();
-                console.log('characerSets after color selection', characterSets)
+                console.log('characterSets after color selection', characterSets);
             } else {
                 console.error(`Invalid color selected: ${colorName}`);
             }
         }
     });
-                
+                    
     // Event delegation for character selection
     characterContainer.addEventListener('change', (e) => {
         if (e.target.classList.contains('characterSelect')) {
