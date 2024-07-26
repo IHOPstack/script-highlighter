@@ -7,11 +7,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const previewArea = document.getElementById('previewArea');
     const downloadBtn = document.getElementById('downloadBtn');
     const editBtn = document.getElementById('editBtn');
-
+    
+    // Single source of truth for character data
     let currentPdfDoc = null;
     let characters = [];
+    let characterSets = [];
+    let availableCharacters = [];
 
-    uploadBtn.addEventListener('click', function() {
+    uploadBtn.addEventListener('click', async function() {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.pdf';
@@ -23,6 +26,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     currentPdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
                     characters = await extractCharacters(arrayBuffer, window.pdfjsLib);
                     populateCharacterList(characters);
+                    // After successful upload and character extraction
+                    availableCharacters = characters; // Assume this is how we get characters from the PDF
+                    updateCharacterSelects();
+
+                    // Update the original character set in the data structure
+                    if (characterSets.length === 0) {
+                        characterSets.push({ character: '', color: {r: 1, g: 1, b: 0} });
+                    }
                 } catch (error) {
                     alert('Upload failed. Please try again.');
                 }
@@ -32,23 +43,24 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     highlightBtn.addEventListener('click', async function() {
-        const selectedCharacter = characterSelect.value;
-        if (selectedCharacter && currentPdfDoc) {
+        const characters = characterSets.filter(set => set.character).map(set => ({
+            name: set.character,
+            color: set.color
+        }));
+        
+        if (characters.length > 0 && currentPdfDoc) {
             try {
-                const highlightedPdfDoc = await highlightPDF(currentPdfDoc, selectedCharacter, PDFLib, pdfjsLib, selectedColor);
-                const pdfBytes = await highlightedPdfDoc.save();
-                const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
-                const pdfUrl = URL.createObjectURL(pdfBlob);
-                previewArea.innerHTML = `<iframe src="${pdfUrl}" width="100%" height="500px"></iframe>`;
+                const highlightedPdfDoc = await highlightPDF(currentPdfDoc, characters, PDFLib, pdfjsLib);
+                // ... rest of the highlighting logic ...
             } catch (error) {
                 console.error('Highlighting failed:', error);
                 alert('Highlighting failed. Please try again.');
             }
         } else {
-            alert('Please select a character and upload a script first.');
+            alert('Please select at least one character and upload a script first.');
         }
     });
-    
+            
     let selectedColor = {r: 1, g: 1, b: 0}; // Default yellow
 
     const colorOptions = document.querySelectorAll('.color-option');
@@ -75,11 +87,132 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set default selected color
     document.getElementById('yellow').classList.add('selected');
         
+
+    function createCharacterSet(character = '', color = {r: 1, g: 1, b: 0}) {
+        const characterSet = document.createElement('div');
+        characterSet.className = 'character-set';
+    
+        const select = document.createElement('select');
+        select.className = 'characterSelect';
+        select.innerHTML = '<option value="">Select Character</option>';
+        availableCharacters.forEach(char => {
+            const option = document.createElement('option');
+            option.value = char;
+            option.textContent = char;
+            select.appendChild(option);
+        });
+    
+        const colorOptions = document.createElement('div');
+        colorOptions.className = 'color-options';
+        ['yellow', 'pink', 'blue', 'green', 'orange', 'purple'].forEach(colorName => {
+            const button = document.createElement('button');
+            button.className = `color-option ${colorName === 'yellow' ? 'selected' : ''}`;
+            button.id = colorName;
+            button.setAttribute('data-color', colorName);
+            button.innerHTML = '<i class="fas fa-highlighter"></i>';
+            colorOptions.appendChild(button);
+        });
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-character-btn';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', () => removeCharacterSet(characterSet));
+    
+        characterSet.appendChild(select);
+        characterSet.appendChild(colorOptions);
+        characterSet.appendChild(removeBtn);
+        
+        return characterSet;
+    }
+
+    function updateCharacterSelects() {
+        const selects = document.querySelectorAll('.characterSelect');
+        selects.forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select Character</option>';
+            availableCharacters.forEach(char => {
+                const option = document.createElement('option');
+                option.value = char;
+                option.textContent = char;
+                select.appendChild(option);
+            });
+            select.value = currentValue; // Maintain the current selection if possible
+        });
+    }
+    
+                        
+    function removeCharacterSet(characterSet) {
+        if (characterSets.length > 1) {  // Always keep at least one character set
+            const index = Array.from(characterContainer.children).indexOf(characterSet);
+            characterSets.splice(index, 1);
+            characterSet.remove();
+            updateHighlightButtonColor();
+        }
+    }
+                            
+    function updateHighlightButtonColor() {
+        const lastSet = characterSets[characterSets.length - 1];
+        highlightBtn.style.backgroundColor = `rgb(${lastSet.color.r * 255}, ${lastSet.color.g * 255}, ${lastSet.color.b * 255})`;
+    }
+    
+    const addCharacterBtn = document.getElementById('addCharacterBtn');
+    const characterContainer = document.getElementById('characterContainer');
+    
+    addCharacterBtn.addEventListener('click', () => {
+        const newSet = createCharacterSet();
+        characterContainer.insertBefore(newSet, characterContainer.firstChild);
+        characterSets.unshift({ character: '', color: {r: 1, g: 1, b: 0} });
+    });
+                
+    // Event delegation for color selection
+    characterContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('color-option') || e.target.closest('.color-option')) {
+            const colorOption = e.target.classList.contains('color-option') ? e.target : e.target.closest('.color-option');
+            const characterSet = colorOption.closest('.character-set');
+            const isOriginalSet = characterSet.closest('.original-set') !== null;
+            
+            const index = isOriginalSet ? characterSets.length - 1 : Array.from(characterContainer.children).indexOf(characterSet);
+            
+            characterSet.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+            colorOption.classList.add('selected');
+            
+            const color = colorOption.getAttribute('data-color');
+            characterSets[index].color = getColorRGB(color);
+            updateHighlightButtonColor();
+        }
+    });
+        
+    // Event delegation for character selection
+    characterContainer.addEventListener('change', (e) => {
+        if (e.target.classList.contains('characterSelect')) {
+            const characterSet = e.target.closest('.character-set');
+            const isOriginalSet = characterSet.closest('.original-set') !== null;
+            
+            const index = isOriginalSet ? characterSets.length - 1 : Array.from(characterContainer.children).indexOf(characterSet);
+            characterSets[index].character = e.target.value;
+        }
+    });
+            
     highlightBtn.addEventListener('click', async function() {
-        const selectedCharacter = characterSelect.value;
-        if (selectedCharacter && currentPdfDoc) {
+        const allCharacterSets = [
+            ...Array.from(characterContainer.querySelectorAll('.character-set')),
+            document.querySelector('.original-set .character-set')
+        ];
+        
+        const characters = allCharacterSets
+            .map(set => {
+                const select = set.querySelector('.characterSelect');
+                const selectedColor = set.querySelector('.color-option.selected');
+                return {
+                    name: select.value,
+                    color: getColorRGB(selectedColor.getAttribute('data-color'))
+                };
+            })
+            .filter(char => char.name); // Remove empty selections
+    
+        if (characters.length > 0 && currentPdfDoc) {
             try {
-                const highlightedPdfDoc = await highlightPDF(currentPdfDoc, selectedCharacter, PDFLib, pdfjsLib, selectedColor);
+                const highlightedPdfDoc = await highlightPDF(currentPdfDoc, characters, PDFLib, pdfjsLib);
                 const pdfBytes = await highlightedPdfDoc.save();
                 const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
                 const pdfUrl = URL.createObjectURL(pdfBlob);
@@ -89,10 +222,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Highlighting failed. Please try again.');
             }
         } else {
-            alert('Please select a character and upload a script first.');
+            alert('Please select at least one character and upload a script first.');
         }
     });
-    
+                    
     editBtn.addEventListener('click', async function() {
         if (currentPdfDoc && characterSelect.value) {
             try {
@@ -140,5 +273,39 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             characterSelect.disabled = false;
         }
+    }
+});
+function getColorRGB(color) {
+    switch(color) {
+        case 'yellow': return {r: 1, g: 1, b: 0};
+        case 'pink': return {r: 1, g: 0.42, b: 1};
+        case 'blue': return {r: 0.1, g: 0.78, b: 1};
+        case 'green': return {r: 0.32, g: 1, b: 0};
+        case 'orange': return {r: 1, g: 0.61, b: 0};
+        case 'purple': return {r: 0.8, g: 0.37, b: 1};
+        default: return {r: 1, g: 1, b: 0}; // Default to yellow
+    }
+}
+// Event delegation for character selection
+document.addEventListener('change', (e) => {
+    if (e.target.classList.contains('characterSelect')) {
+        const index = Array.from(document.querySelectorAll('.character-set')).indexOf(e.target.closest('.character-set'));
+        characterSets[index].character = e.target.value;
+    }
+});
+
+// Event delegation for color selection
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('color-option') || e.target.closest('.color-option')) {
+        const colorOption = e.target.classList.contains('color-option') ? e.target : e.target.closest('.color-option');
+        const characterSet = colorOption.closest('.character-set');
+        const index = Array.from(document.querySelectorAll('.character-set')).indexOf(characterSet);
+        
+        characterSet.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+        colorOption.classList.add('selected');
+        
+        const color = colorOption.getAttribute('data-color');
+        characterSets[index].color = getColorRGB(color);
+        updateHighlightButtonColor();
     }
 });

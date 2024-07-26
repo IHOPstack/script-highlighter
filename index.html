@@ -39,21 +39,31 @@
             <div class="ad-space-horizontal">Ad Space</div>
             
             <section class="actions">
-                <button id="uploadBtn" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
-                <select id="characterSelect">
-                    <option value="">Select Character</option>
-                </select>
-                <button id="highlightBtn" class="btn btn-highlight"><i class="fas fa-highlighter"></i> Highlight Script</button>
-                <div class="color-options">
-                    <button class="color-option" data-color="yellow" id="yellow"><i class="fas fa-highlighter"></i></button>
-                    <button class="color-option" data-color="pink" id="pink"><i class="fas fa-highlighter"></i></button>
-                    <button class="color-option" data-color="blue" id="blue"><i class="fas fa-highlighter"></i></button>
-                    <button class="color-option" data-color="green" id="green"><i class="fas fa-highlighter"></i></button>
-                    <button class="color-option" data-color="orange" id="orange"><i class="fas fa-highlighter"></i></button>
-                    <button class="color-option" data-color="purple" id="purple"><i class="fas fa-highlighter"></i></button>
+                <div id="characterContainer">
+                    <!-- Additional character sets will be inserted here -->
+                </div>
+                <div class="original-set">
+                    <div class="character-set">
+                        <select id="characterSelect" class="characterSelect">
+                            <option value="">Select Character</option>
+                        </select>
+                        <div class="color-options">
+                            <button class="color-option selected" id="yellow" data-color="yellow"><i class="fas fa-highlighter"></i></button>
+                            <button class="color-option" id="pink" data-color="pink"><i class="fas fa-highlighter"></i></button>
+                            <button class="color-option" id="blue" data-color="blue"><i class="fas fa-highlighter"></i></button>
+                            <button class="color-option" id="green" data-color="green"><i class="fas fa-highlighter"></i></button>
+                            <button class="color-option" id="orange" data-color="orange"><i class="fas fa-highlighter"></i></button>
+                            <button class="color-option" id="purple" data-color="purple"><i class="fas fa-highlighter"></i></button>
+                        </div>
+                    </div>
+                    <div class="main-buttons">
+                        <button id="uploadBtn" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+                        <button id="highlightBtn" class="btn btn-highlight"><i class="fas fa-highlighter"></i> Highlight Script</button>
+                        <button id="addCharacterBtn" class="btn btn-secondary"><i class="fas fa-plus"></i> Add Character</button>
+                    </div>
                 </div>
             </section>
-                                    
+                                                                                                            
             <section class="preview">
                 <div id="previewArea">Highlighted script will appear here.</div>
             </section>

@@ -84,7 +84,8 @@ h1 {
     font-size: 14px;
 }
 
-#characterSelect {
+#characterSelect,
+.characterSelect {
     font-family: 'Courier New', Courier, monospace;
     padding: 10px;
     border: 2px solid var(--text-color);
@@ -100,11 +101,6 @@ h1 {
     min-height: 300px;
     max-height: 500px;
     overflow-y: auto;
-}
-.actions {
-    display: flex;
-    align-items: center;
-    gap: 10px; /* This adds space between all child elements */
 }
 
 .color-options {
@@ -160,4 +156,89 @@ h1 {
     background-color: var(--highlighter-yellow);
     color: black;
     font-size: 14px;
+}
+.actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#characterContainer {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+}
+
+.character-set {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.original-set {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.main-buttons {
+    display: flex;
+    gap: 10px;
+}
+.remove-character-btn {
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    border-radius: 5px;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+.color-options {
+    display: flex;
+    gap: 5px;
+}
+
+.color-option {
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    position: relative;
+    padding: 0;
+}
+
+.color-option i {
+    font-size: 24px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.color-option.selected::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border: 2px solid;
+    border-radius: 50%;
+}
+
+.remove-character-btn {
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    border-radius: 5px;
 }

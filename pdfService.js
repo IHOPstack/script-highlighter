@@ -43,7 +43,7 @@ export async function extractCharacters(pdfBuffer, pdfjsLib) {
     return Array.from(characters).sort();
 }
 
-export async function highlightPDF(pdfDoc, characterName, PDFLib, pdfjsLib, highlightColor) {
+export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib) {
     const pdfBytes = await pdfDoc.save();
     const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
     const pdf = await loadingTask.promise;
@@ -57,9 +57,8 @@ export async function highlightPDF(pdfDoc, characterName, PDFLib, pdfjsLib, high
         const textContent = await pdfJsPage.getTextContent();
         const { width, height } = page.getSize();
         
-        let isCharacterSpeaking = false;
+        let speakingCharacters = new Set();
 
-        // Sort items from top to bottom
         const sortedItems = textContent.items.sort((a, b) => b.transform[5] - a.transform[5]);
 
         for (const item of sortedItems) {
@@ -69,21 +68,24 @@ export async function highlightPDF(pdfDoc, characterName, PDFLib, pdfjsLib, high
 
             console.log(`Text: "${text}", Position: (${item.transform[4]}, ${item.transform[5]}), Size: ${item.width}x${item.height}`);
 
-            if (text === characterName.toUpperCase()) {
-                isCharacterSpeaking = true;
-                console.log(`Character ${characterName} starts speaking`);
+            // Check if this text is a character name
+            const matchingCharacter = characters.find(char => char.name.toUpperCase() === text.toUpperCase());
+            if (matchingCharacter) {
+                speakingCharacters.add(matchingCharacter);
+                console.log(`Character ${matchingCharacter.name} starts speaking`);
                 continue;
             }
 
-            if (isCharacterSpeaking) {
+            // Highlight text for speaking characters
+            for (const character of speakingCharacters) {
                 if (text.toUpperCase() === text && text.length > 1) {
-                    isCharacterSpeaking = false;
-                    console.log('New character found, stop highlighting');
+                    speakingCharacters.delete(character);
+                    console.log(`Character ${character.name} stops speaking`);
                 } else if (text.startsWith("(") && text.endsWith(")")) {
                     console.log('Parenthetical, skipping');
                     continue;
                 } else if (!/\w/.test(text)) {
-                    isCharacterSpeaking = false;
+                    speakingCharacters.delete(character);
                 } else {
                     const rect = {
                         x: item.transform[4],
@@ -93,7 +95,7 @@ export async function highlightPDF(pdfDoc, characterName, PDFLib, pdfjsLib, high
                     };
                     page.drawRectangle({
                         ...rect,
-                        color: PDFLib.rgb(highlightColor.r, highlightColor.g, highlightColor.b),
+                        color: PDFLib.rgb(character.color.r, character.color.g, character.color.b),
                         opacity: 0.3,
                     });
                 }
@@ -102,8 +104,8 @@ export async function highlightPDF(pdfDoc, characterName, PDFLib, pdfjsLib, high
             if (sortedItems.indexOf(item) < sortedItems.length - 1) {
                 const nextItem = sortedItems[sortedItems.indexOf(item) + 1];
                 if (Math.abs(nextItem.transform[5] - item.transform[5]) > item.height) {
-                    isCharacterSpeaking = false;
-                    console.log('New line detected, stop highlighting');
+                    speakingCharacters.clear();
+                    console.log('New line detected, stop highlighting for all characters');
                 }
             }
         }
