@@ -1,54 +1,28 @@
 import { extractCharacters, highlightPDF, generateHeatMap } from './pdfService.js';
+import { CharacterSetManager } from './characterSetManager.js';
+import { UIManager } from './uiManager.js';
 
-const characterSetManager = {
-    sets: [],
-    
-    addSet(character = '', color = 'yellow') {
-        this.sets.push({ character, color });
-        this.updateUI();
-    },
-    
-    removeSet(index) {
-        if (this.sets.length > 1) {
-            this.sets.splice(index, 1);
-            this.updateUI();
-        }
-    },
-    
-    updateSet(index, character, color) {
-        this.sets[index] = { character, color };
-        this.updateUI();
-    },
-    
-    updateUI() {
-        // This method will be defined later to update the UI based on the current state
-    }
+const HIGHLIGHT_COLORS = {
+    yellow: { hex: '#ffff00', rgb: {r: 1, g: 1, b: 0} },
+    pink: { hex: '#ff6bff', rgb: {r: 1, g: 0.42, b: 1} },
+    blue: { hex: '#1ac7ff', rgb: {r: 0.1, g: 0.78, b: 1} },
+    green: { hex: '#51ff00', rgb: {r: 0.32, g: 1, b: 0} },
+    orange: { hex: '#ff9b00', rgb: {r: 1, g: 0.61, b: 0} },
+    purple: { hex: '#cb5eff', rgb: {r: 0.8, g: 0.37, b: 1} }
 };
 
 document.addEventListener('DOMContentLoaded', function() {
-    const HIGHLIGHT_COLORS = {
-        yellow: { hex: '#ffff00', rgb: {r: 1, g: 1, b: 0} },
-        pink: { hex: '#ff6bff', rgb: {r: 1, g: 0.42, b: 1} },
-        blue: { hex: '#1ac7ff', rgb: {r: 0.1, g: 0.78, b: 1} },
-        green: { hex: '#51ff00', rgb: {r: 0.32, g: 1, b: 0} },
-        orange: { hex: '#ff9b00', rgb: {r: 1, g: 0.61, b: 0} },
-        purple: { hex: '#cb5eff', rgb: {r: 0.8, g: 0.37, b: 1} }
-    };    
+    const characterSetManager = new CharacterSetManager();
+    const uiManager = new UIManager(characterSetManager, HIGHLIGHT_COLORS);
+
     const uploadBtn = document.getElementById('uploadBtn');
-    const characterSelect = document.getElementById('characterSelect');
     const highlightBtn = document.getElementById('highlightBtn');
     const previewArea = document.getElementById('previewArea');
     const downloadBtn = document.getElementById('downloadBtn');
     const editBtn = document.getElementById('editBtn');
-    characterSetManager.addSet();  // Add the original set
-    characterSetManager.updateUI();  // Initial UI update
-
+    const addCharacterBtn = document.getElementById('addCharacterBtn');
     
-    // Single source of truth for character data
     let currentPdfDoc = null;
-    let characters = [];
-    let characterSets = [];
-    let availableCharacters = [];
 
     uploadBtn.addEventListener('click', async function() {
         const input = document.createElement('input');
@@ -60,17 +34,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 try {
                     const arrayBuffer = await file.arrayBuffer();
                     currentPdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
-                    characters = await extractCharacters(arrayBuffer, window.pdfjsLib);
-                    populateCharacterList(characters);
-                    // After successful upload and character extraction
-                    availableCharacters = characters; // Assume this is how we get characters from the PDF
-                    updateCharacterSelects();
-
-                    // Update the original character set in the data structure
-                    if (characterSets.length === 0) {
-                        characterSets.push({ character: '', color: {r: 1, g: 1, b: 0} });
-                    }
+                    const characters = await extractCharacters(arrayBuffer, window.pdfjsLib);
+                    characterSetManager.setAvailableCharacters(characters);
+                    uiManager.updateUI();
                 } catch (error) {
+                    console.error('Upload failed:', error);
                     alert('Upload failed. Please try again.');
                 }
             }
@@ -84,24 +52,13 @@ document.addEventListener('DOMContentLoaded', function() {
             color: HIGHLIGHT_COLORS[set.color].rgb
         }));
         
-        console.log('Characters to highlight:', characters);
-        
         if (characters.length > 0 && currentPdfDoc) {
             try {
                 const highlightedPdfDoc = await highlightPDF(currentPdfDoc, characters, PDFLib, pdfjsLib);
                 const pdfBytes = await highlightedPdfDoc.save();
                 const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
                 const pdfUrl = URL.createObjectURL(pdfBlob);
-                
-                // Log for debugging
-                console.log('PDF URL created:', pdfUrl);
-                
-                // Update the preview area
-                const previewArea = document.getElementById('previewArea');
                 previewArea.innerHTML = `<iframe src="${pdfUrl}" width="100%" height="500px"></iframe>`;
-                
-                // Log for debugging
-                console.log('Preview area updated');
             } catch (error) {
                 console.error('Highlighting failed:', error);
                 alert('Highlighting failed. Please try again.');
@@ -110,124 +67,14 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please select at least one character and upload a script first.');
         }
     });
-                        
-    let selectedColor = {r: 1, g: 1, b: 0}; // Default yellow
 
-    const colorOptions = document.querySelectorAll('.color-option');
-    
-    colorOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            colorOptions.forEach(opt => opt.classList.remove('selected'));
-            this.classList.add('selected');
-            
-            const color = this.getAttribute('data-color');
-            switch(color) {
-                case 'yellow': selectedColor = {r: 1, g: 1, b: 0}; break;
-                case 'pink': selectedColor = {r: 1, g: 0.42, b: 1}; break;
-                case 'blue': selectedColor = {r: 0.1, g: 0.78, b: 1}; break;
-                case 'green': selectedColor = {r: 0.32, g: 1, b: 0}; break;
-                case 'orange': selectedColor = {r: 1, g: 0.61, b: 0}; break;
-                case 'purple': selectedColor = {r: 0.8, g: 0.37, b: 1}; break;
-            }
-            
-            highlightBtn.style.backgroundColor = `rgb(${selectedColor.r * 255}, ${selectedColor.g * 255}, ${selectedColor.b * 255})`;
-        });
-    });
-    
-    // Set default selected color
-    document.getElementById('yellow').classList.add('selected');
-        
-
-    function createCharacterSetElement(index, character = '', color = 'yellow') {
-        const characterSet = document.createElement('div');
-        characterSet.className = 'character-set';
-        characterSet.dataset.index = index;
-    
-        const select = document.createElement('select');
-        select.className = 'characterSelect';
-        select.innerHTML = '<option value="">Select Character</option>';
-        availableCharacters.forEach(char => {
-            const option = document.createElement('option');
-            option.value = char;
-            option.textContent = char;
-            if (char === character) option.selected = true;
-            select.appendChild(option);
-        });
-    
-        const colorOptions = document.createElement('div');
-        colorOptions.className = 'color-options';
-        Object.keys(HIGHLIGHT_COLORS).forEach(colorName => {
-            const button = document.createElement('button');
-            button.className = `color-option ${colorName === color ? 'selected' : ''}`;
-            button.setAttribute('data-color', colorName);
-            button.innerHTML = '<i class="fas fa-highlighter"></i>';
-            button.style.color = HIGHLIGHT_COLORS[colorName].hex;
-            colorOptions.appendChild(button);
-        });
-    
-        if (index > 0) {  // Don't add remove button to the original set
-            const removeBtn = document.createElement('button');
-            removeBtn.className = 'remove-character-btn';
-            removeBtn.textContent = 'Remove';
-            removeBtn.addEventListener('click', () => characterSetManager.removeSet(index));
-            characterSet.appendChild(removeBtn);
-        }
-    
-        characterSet.appendChild(select);
-        characterSet.appendChild(colorOptions);
-    
-        return characterSet;
-    }
-    
-    characterSetManager.updateUI = function() {
-        const container = document.getElementById('characterContainer');
-        container.innerHTML = '';
-        this.sets.forEach((set, index) => {
-            container.appendChild(createCharacterSetElement(index, set.character, set.color));
-        });
-        updateHighlightButtonColor();
-    };
-    
-
-    function updateCharacterSelects() {
-        const selects = document.querySelectorAll('.characterSelect');
-        selects.forEach(select => {
-            const currentValue = select.value;
-            select.innerHTML = '<option value="">Select Character</option>';
-            availableCharacters.forEach(char => {
-                const option = document.createElement('option');
-                option.value = char;
-                option.textContent = char;
-                select.appendChild(option);
-            });
-            select.value = currentValue; // Maintain the current selection if possible
-        });
-    }
-    
-                        
-    function removeCharacterSet(characterSet) {
-        if (characterSets.length > 1) {  // Always keep at least one character set
-            const index = Array.from(characterContainer.children).indexOf(characterSet);
-            characterSets.splice(index, 1);
-            characterSet.remove();
-            updateHighlightButtonColor();
-        }
-    }
-                            
-    function updateHighlightButtonColor() {
-        const lastSet = characterSets[characterSets.length - 1];
-        highlightBtn.style.backgroundColor = HIGHLIGHT_COLORS[lastSet.color].hex;
-    }
-        
-    const addCharacterBtn = document.getElementById('addCharacterBtn');
-    const characterContainer = document.getElementById('characterContainer');
-    
     addCharacterBtn.addEventListener('click', () => {
         characterSetManager.addSet();
+        uiManager.updateUI();
     });
+
+    const characterContainer = document.getElementById('characterContainer');
     
-                    
-    // Event delegation for color selection
     characterContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('color-option') || e.target.closest('.color-option')) {
             const colorOption = e.target.classList.contains('color-option') ? e.target : e.target.closest('.color-option');
@@ -236,32 +83,31 @@ document.addEventListener('DOMContentLoaded', function() {
             const character = characterSet.querySelector('.characterSelect').value;
             const color = colorOption.dataset.color;
             characterSetManager.updateSet(index, character, color);
+            uiManager.updateUI();
         }
     });
-    
-                    
-    // Event delegation for character selection
+
     characterContainer.addEventListener('change', (e) => {
         if (e.target.classList.contains('characterSelect')) {
             const characterSet = e.target.closest('.character-set');
             const index = parseInt(characterSet.dataset.index);
             const color = characterSet.querySelector('.color-option.selected').dataset.color;
             characterSetManager.updateSet(index, e.target.value, color);
+            uiManager.updateUI();
         }
     });
-    
-                        
+
     editBtn.addEventListener('click', async function() {
-        if (currentPdfDoc && characterSelect.value) {
+        if (currentPdfDoc && characterSetManager.sets.length > 0) {
             try {
-                const heatMapPdf = await generateHeatMap(currentPdfDoc, characterSelect.value, PDFLib, pdfjsLib);
+                const heatMapPdf = await generateHeatMap(currentPdfDoc, characterSetManager.sets[0].character, PDFLib, pdfjsLib);
                 const pdfBytes = await heatMapPdf.save();
                 const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
                 const pdfUrl = URL.createObjectURL(pdfBlob);
                 
                 const heatMapDiv = document.createElement('div');
                 heatMapDiv.innerHTML = `
-                    <h3>Heat Map for ${characterSelect.value}</h3>
+                    <h3>Heat Map for ${characterSetManager.sets[0].character}</h3>
                     <iframe src="${pdfUrl}" width="100%" height="500px"></iframe>
                 `;
                 
@@ -280,34 +126,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please select a character and upload a script first.');
         }
     });
-        
-    function populateCharacterList(characters) {
-        characterSelect.innerHTML = '<option value="">Select Character</option>';
-        if (characters.length === 0) {
-            const option = document.createElement('option');
-            option.value = "";
-            option.textContent = "No characters found";
-            characterSelect.appendChild(option);
-            characterSelect.disabled = true;
-        } else {
-            characters.forEach(character => {
-                const option = document.createElement('option');
-                option.value = character;
-                option.textContent = character;
-                characterSelect.appendChild(option);
-            });
-            characterSelect.disabled = false;
-        }
-    }
+
+    // Initial UI update
+    uiManager.updateUI();
 });
-function getColorRGB(color) {
-    switch(color) {
-        case 'yellow': return {r: 1, g: 1, b: 0};
-        case 'pink': return {r: 1, g: 0.42, b: 1};
-        case 'blue': return {r: 0.1, g: 0.78, b: 1};
-        case 'green': return {r: 0.32, g: 1, b: 0};
-        case 'orange': return {r: 1, g: 0.61, b: 0};
-        case 'purple': return {r: 0.8, g: 0.37, b: 1};
-        default: return {r: 1, g: 1, b: 0}; // Default to yellow
-    }
-}
