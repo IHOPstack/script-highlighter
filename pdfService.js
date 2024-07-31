@@ -1,40 +1,130 @@
+function cleanCharacterName(name) {
+    return name.replace(/\s{3,}.*$/, '').trim();
+}
+async function calibratePDF(pdf, pdfjsLib, numPagesSample = 5) {
+    let characterXPositions = [];
+    let dialogueXPositions = [];
+
+    for (let i = 1; i <= Math.min(numPagesSample, pdf.numPages); i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const lines = constructLineFromItems(textContent.items);
+
+        lines.forEach((line, index) => {
+            if (line.text === line.text.toUpperCase() && line.text.length < 30 && lines[index + 1]?.text !== lines[index + 1]?.text.toUpperCase()) {
+                characterXPositions.push(line.x);
+            } else if (index > 0 && lines[index - 1].text === lines[index - 1].text.toUpperCase()) {
+                dialogueXPositions.push(line.x);
+            }
+        });
+    }
+
+    const medianCharacterX = calculateMedian(characterXPositions);
+    const medianDialogueX = calculateMedian(dialogueXPositions);
+
+    return { characterX: medianCharacterX, dialogueX: medianDialogueX };
+}
+
+function calculateMedian(numbers) {
+    const sorted = numbers.slice().sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+}
+function sortItemsByVerticalPosition(items) {
+    // Top-to-Bottom, Left-to-Right
+    return items.sort((a, b) => {
+        const verticalDiff = b.transform[5] - a.transform[5];  // reverse-vertical
+        if (Math.abs(verticalDiff) > 2) return verticalDiff;   // If not on same line, use vertical
+        return a.transform[4] - b.transform[4];  // If on same line, Left-to-Right
+    });
+}
+
+function constructLineFromItems(items) {
+    const sortedItems = sortItemsByVerticalPosition(items);
+    const lines = [];
+    let currentLine = {text: "", y: null, x: null};
+
+    const Y_THRESHOLD = 3;  // Adjust as needed
+    const X_MARGIN_THRESHOLD = 100; // For dete cting character-names, dialogue, etc
+
+    for (const item of sortedItems) {
+        const {str, transform} = item;
+        const [x, y] = [transform[4], transform[5]];
+
+        if (currentLine.y === null || Math.abs(y - currentLine.y) <= Y_THRESHOLD) {
+            // Same line:  Append
+            currentLine.text += str + " ";
+            currentLine.y = y;  // Update y (smoother)
+            if (currentLine.x === null) currentLine.x = x;  // Only set x if it's null
+        } else {
+            // New line: Push the current, start a new
+            if (currentLine.text.trim()) {
+                lines.push({
+                    text: currentLine.text.trim(),
+                    x: currentLine.x,
+                    y: currentLine.y
+                });
+            }
+            currentLine = {text: str + " ", y: y, x: x};
+        }
+    }
+
+    // Don't forget the last line:
+    if (currentLine.text.trim()) {
+        lines.push({
+            text: currentLine.text.trim(), 
+            x: currentLine.x, 
+            y: currentLine.y
+        });
+    }
+
+    return lines;  // Correct the order
+}
+
 export async function extractCharacters(pdfBuffer, pdfjsLib) {
     const pdf = await pdfjsLib.getDocument(pdfBuffer).promise;
     const characters = new Set();
     const maxNameLength = 30;
     const groupDialogueKeywords = ['EVERYONE', 'BOTH', 'ALL'];
+    const nonCharacterKeywords = ['FADE', 'CUT', 'DISSOLVE', 'TRANSITION'];
+
+    // Calibrate the PDF
+    const { characterX, dialogueX } = await calibratePDF(pdf, pdfjsLib);
+    const xTolerance = 10; // Tolerance for x position variation
 
     for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
-        const items = textContent.items;
+        const lines = constructLineFromItems(textContent.items);
 
-        for (let j = 0; j < items.length; j++) {
-            const item = items[j];
-            const trimmedText = item.str.trim();
+        for (let j = 0; j < lines.length; j++) {
+            const line = lines[j];
+            const trimmedText = line.text.trim();
+            console.log(trimmedText, line.x)
 
-            // Skip lines completely encased in parentheses
-            if (trimmedText.startsWith('(') && trimmedText.endsWith(')')) {
+            // Skip empty lines and lines containing non-character keywords
+            if (!trimmedText || nonCharacterKeywords.some(keyword => trimmedText.includes(keyword))) {
                 continue;
             }
 
-            // Check if the text is all uppercase, not too long, and not just numbers
-            if (trimmedText === trimmedText.toUpperCase() && 
-                trimmedText.length > 1 && 
+            // Check if the line is likely a character name based on x position and other criteria
+            if (Math.abs(line.x - characterX) < xTolerance) {
+                console.log("Potential Character Line: ", trimmedText, "X-value: ", line.x);
+            }
+            if (Math.abs(line.x - characterX) < xTolerance &&
+                trimmedText === trimmedText.toUpperCase() &&
+                trimmedText.length > 1 &&
                 trimmedText.length <= maxNameLength &&
-                /[A-Z]/.test(trimmedText) && 
-                !/^\d+$/.test(trimmedText))
+                /[A-Z]/.test(trimmedText) &&
+                !/^\d+$/.test(trimmedText) &&
+                j < lines.length - 1 && // Ensure there's a next line
+                Math.abs(lines[j + 1].x - dialogueX) < xTolerance) // Check if next line is likely dialogue
             {
-                // Check if the next line is not all uppercase (to avoid including scene headings)
-                const nextItem = items[j + 1];
-                if (nextItem && nextItem.str.trim() !== nextItem.str.trim().toUpperCase()) {
-                    // Remove any text in parentheses
-                    const cleanedText = trimmedText.split('(')[0].trim();
-                    
-                    // Exclude group dialogue keywords
-                    if (!groupDialogueKeywords.includes(cleanedText)) {
-                        characters.add(cleanedText);
-                    }
+                let cleanedText = trimmedText.split('(')[0].trim(); // Remove parentheticals like "(CONT'D)" or "(V.O.)"
+                cleanedText = cleanedText.split(/\s+/).filter(word => !word.includes('*')).join(' ').trim();
+
+                if (!groupDialogueKeywords.includes(cleanedText)) {
+                    characters.add(cleanCharacterName(cleanedText));
                 }
             }
         }
@@ -175,3 +265,24 @@ function getHeatColor(lineCount) {
         b: 0,
     };
 }
+function measureLines(items, margin = 1) {
+    const lines = [];
+    items.sort((a,b) => (a.transform[5] - b.transform[5]) || (a.transform[4] - b.transform[4]));
+    
+    let current = { top: items[0]?.transform[5] || 0, text: '' };
+    items.forEach(item => {
+       if(Math.abs(item.transform[5] - current.top) > margin) {
+          if(current.text) lines.push(current.text.trim());
+          current = { top: item.transform[5], text: item.str };
+       } else {
+          current.text += ' ' + item.str;
+       }
+    });
+    
+    if(current.text) lines.push(current.text.trim());
+    return lines;
+ }
+ 
+ function detectScriptElement(line, {CHARACTER_MARGIN, DIALOGUE_MARGIN}) {
+ 
+ }
