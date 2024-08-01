@@ -1,3 +1,33 @@
+export class ScriptLine {
+    constructor(text, x, y, type = 'unknown') {
+        this.text = text;
+        this.x = x;
+        this.y = y;
+        this.type = type;  // 'character', 'dialogue', 'other', or 'unknown'
+    }
+}
+
+export class PDFPageMap {
+    constructor() {
+        this.map = new Map();
+    }
+
+    setPageLines(pageNumber, lines) {
+        this.map.set(pageNumber, lines);
+    }
+
+    getPageLines(pageNumber) {
+        return this.map.get(pageNumber) || [];
+    }
+
+    getAllPages() {
+        return Array.from(this.map.keys());
+    }
+
+    getTotalLines() {
+        return Array.from(this.map.values()).reduce((acc, lines) => acc + lines.length, 0);
+    }
+}
 export class CharacterSetManager {
     constructor() {
         this.sets = [{character: '', color: 'yellow'}]; // Initialize with the default set

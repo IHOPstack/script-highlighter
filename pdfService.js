@@ -1,6 +1,15 @@
+import { ScriptLine } from './dataManagement.js';
+
 function cleanCharacterName(name) {
-    return name.replace(/\s{3,}.*$/, '').trim();
+    return name.split(/\s*\(|\s{2,}/)[0].trim();
 }
+
+function calculateMedian(numbers) {
+    const sorted = numbers.slice().sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+}
+
 async function calibratePDF(pdf, pdfjsLib, numPagesSample = 5) {
     let characterXPositions = [];
     let dialogueXPositions = [];
@@ -8,27 +17,65 @@ async function calibratePDF(pdf, pdfjsLib, numPagesSample = 5) {
     for (let i = 1; i <= Math.min(numPagesSample, pdf.numPages); i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
-        const lines = constructLineFromItems(textContent.items);
+        const lines = constructLineFromItems(textContent.items);  // This now returns ScriptLines automatically!
 
         lines.forEach((line, index) => {
-            if (line.text === line.text.toUpperCase() && line.text.length < 30 && lines[index + 1]?.text !== lines[index + 1]?.text.toUpperCase()) {
+            const nextLine = lines[index + 1];
+            if (line.text === line.text.toUpperCase() && 
+                line.text.length < 30 && 
+                nextLine?.text !== nextLine?.text.toUpperCase()) {
                 characterXPositions.push(line.x);
-            } else if (index > 0 && lines[index - 1].text === lines[index - 1].text.toUpperCase()) {
+            } else if (index > 0 && 
+                       lines[index - 1].text === lines[index - 1].text.toUpperCase()) {
                 dialogueXPositions.push(line.x);
             }
         });
     }
 
-    const medianCharacterX = calculateMedian(characterXPositions);
-    const medianDialogueX = calculateMedian(dialogueXPositions);
-
-    return { characterX: medianCharacterX, dialogueX: medianDialogueX };
+    return { 
+        characterX: calculateMedian(characterXPositions), 
+        dialogueX: calculateMedian(dialogueXPositions) 
+    };
 }
 
-function calculateMedian(numbers) {
-    const sorted = numbers.slice().sort((a, b) => a - b);
-    const middle = Math.floor(sorted.length / 2);
-    return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+export async function extractCharacters(pdfBuffer, pdfjsLib, pdfPageMap) {
+    const pdf = await pdfjsLib.getDocument(pdfBuffer).promise;
+    const characters = new Set();
+    const uncertainCharacters = new Set();
+    const xTolerance = 10;
+
+    const { characterX, dialogueX } = await calibratePDF(pdf, pdfjsLib);
+    
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const lines = constructLineFromItems(textContent.items);
+
+        const typedLines = lines.map((line, index) => {
+            const nextLine = lines[index + 1];
+            if (Math.abs(line.x - characterX) < xTolerance) {
+                line.type = 'character';
+                const cleanedName = cleanCharacterName(line.text);
+                if (nextLine && Math.abs(nextLine.x - dialogueX) < xTolerance) {
+                    characters.add(cleanedName);
+                } else {
+                    uncertainCharacters.add(cleanedName);
+                }
+            } else if (Math.abs(line.x - dialogueX) < xTolerance) {
+                line.type = 'dialogue';
+            } else {
+                line.type = 'action';
+            }
+            return line;
+        });
+
+        pdfPageMap.setPageLines(i, typedLines);
+    }
+
+    console.log("Total detected characters:", characters.size);
+    console.log("Total uncertain characters:", uncertainCharacters.size);
+
+    return Array.from(characters).sort();
 }
 function sortItemsByVerticalPosition(items) {
     // Top-to-Bottom, Left-to-Right
@@ -44,93 +91,39 @@ function constructLineFromItems(items) {
     const lines = [];
     let currentLine = {text: "", y: null, x: null};
 
-    const Y_THRESHOLD = 3;  // Adjust as needed
-    const X_MARGIN_THRESHOLD = 100; // For dete cting character-names, dialogue, etc
+    const Y_THRESHOLD = 3;  
 
     for (const item of sortedItems) {
         const {str, transform} = item;
         const [x, y] = [transform[4], transform[5]];
 
         if (currentLine.y === null || Math.abs(y - currentLine.y) <= Y_THRESHOLD) {
-            // Same line:  Append
             currentLine.text += str + " ";
-            currentLine.y = y;  // Update y (smoother)
-            if (currentLine.x === null) currentLine.x = x;  // Only set x if it's null
+            currentLine.y = y;
+            if (currentLine.x === null) currentLine.x = x;
         } else {
-            // New line: Push the current, start a new
             if (currentLine.text.trim()) {
-                lines.push({
-                    text: currentLine.text.trim(),
-                    x: currentLine.x,
-                    y: currentLine.y
-                });
+                // NEW: construct ScriptLine instead of raw object
+                lines.push(new ScriptLine(
+                    currentLine.text.trim(), 
+                    currentLine.x, 
+                    currentLine.y
+                ));
             }
             currentLine = {text: str + " ", y: y, x: x};
         }
     }
 
-    // Don't forget the last line:
     if (currentLine.text.trim()) {
-        lines.push({
-            text: currentLine.text.trim(), 
-            x: currentLine.x, 
-            y: currentLine.y
-        });
+        // NEW: construct ScriptLine for last line as well
+        lines.push(new ScriptLine(
+            currentLine.text.trim(), 
+            currentLine.x, 
+            currentLine.y
+        ));
     }
 
-    return lines;  // Correct the order
-}
-
-export async function extractCharacters(pdfBuffer, pdfjsLib) {
-    const pdf = await pdfjsLib.getDocument(pdfBuffer).promise;
-    const characters = new Set();
-    const maxNameLength = 30;
-    const groupDialogueKeywords = ['EVERYONE', 'BOTH', 'ALL'];
-    const nonCharacterKeywords = ['FADE', 'CUT', 'DISSOLVE', 'TRANSITION'];
-
-    // Calibrate the PDF
-    const { characterX, dialogueX } = await calibratePDF(pdf, pdfjsLib);
-    const xTolerance = 10; // Tolerance for x position variation
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const lines = constructLineFromItems(textContent.items);
-
-        for (let j = 0; j < lines.length; j++) {
-            const line = lines[j];
-            const trimmedText = line.text.trim();
-            console.log(trimmedText, line.x)
-
-            // Skip empty lines and lines containing non-character keywords
-            if (!trimmedText || nonCharacterKeywords.some(keyword => trimmedText.includes(keyword))) {
-                continue;
-            }
-
-            // Check if the line is likely a character name based on x position and other criteria
-            if (Math.abs(line.x - characterX) < xTolerance) {
-                console.log("Potential Character Line: ", trimmedText, "X-value: ", line.x);
-            }
-            if (Math.abs(line.x - characterX) < xTolerance &&
-                trimmedText === trimmedText.toUpperCase() &&
-                trimmedText.length > 1 &&
-                trimmedText.length <= maxNameLength &&
-                /[A-Z]/.test(trimmedText) &&
-                !/^\d+$/.test(trimmedText) &&
-                j < lines.length - 1 && // Ensure there's a next line
-                Math.abs(lines[j + 1].x - dialogueX) < xTolerance) // Check if next line is likely dialogue
-            {
-                let cleanedText = trimmedText.split('(')[0].trim(); // Remove parentheticals like "(CONT'D)" or "(V.O.)"
-                cleanedText = cleanedText.split(/\s+/).filter(word => !word.includes('*')).join(' ').trim();
-
-                if (!groupDialogueKeywords.includes(cleanedText)) {
-                    characters.add(cleanCharacterName(cleanedText));
-                }
-            }
-        }
-    }
-
-    return Array.from(characters).sort();
+    return lines;
 }
 
 export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib) {
@@ -265,24 +258,3 @@ function getHeatColor(lineCount) {
         b: 0,
     };
 }
-function measureLines(items, margin = 1) {
-    const lines = [];
-    items.sort((a,b) => (a.transform[5] - b.transform[5]) || (a.transform[4] - b.transform[4]));
-    
-    let current = { top: items[0]?.transform[5] || 0, text: '' };
-    items.forEach(item => {
-       if(Math.abs(item.transform[5] - current.top) > margin) {
-          if(current.text) lines.push(current.text.trim());
-          current = { top: item.transform[5], text: item.str };
-       } else {
-          current.text += ' ' + item.str;
-       }
-    });
-    
-    if(current.text) lines.push(current.text.trim());
-    return lines;
- }
- 
- function detectScriptElement(line, {CHARACTER_MARGIN, DIALOGUE_MARGIN}) {
- 
- }

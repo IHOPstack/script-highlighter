@@ -1,6 +1,6 @@
 import { extractCharacters, highlightPDF, generateHeatMap } from './pdfService.js';
-import { CharacterSetManager } from './characterSetManager.js';
 import { UIManager } from './uiManager.js';
+import { PDFPageMap, CharacterSetManager } from './dataManagement.js';
 
 const HIGHLIGHT_COLORS = {
     yellow: { hex: '#ffff00', rgb: {r: 1, g: 1, b: 0} },
@@ -14,6 +14,7 @@ const HIGHLIGHT_COLORS = {
 document.addEventListener('DOMContentLoaded', function() {
     const characterSetManager = new CharacterSetManager();
     const uiManager = new UIManager(characterSetManager, HIGHLIGHT_COLORS);
+    const pdfData = new PDFPageMap();
 
     const uploadBtn = document.getElementById('uploadBtn');
     const highlightBtn = document.getElementById('highlightBtn');
@@ -34,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 try {
                     const arrayBuffer = await file.arrayBuffer();
                     currentPdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
-                    const characters = await extractCharacters(arrayBuffer, window.pdfjsLib);
+                    const characters = await extractCharacters(arrayBuffer, window.pdfjsLib, pdfData);
                     characterSetManager.setAvailableCharacters(characters);
                     uiManager.updateUI();
                 } catch (error) {
