@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (characters.length > 0 && currentPdfDoc) {
             try {
-                const highlightedPdfDoc = await highlightPDF(currentPdfDoc, characters, PDFLib, pdfjsLib);
+                const highlightedPdfDoc = await highlightPDF(currentPdfDoc, characters, PDFLib, pdfjsLib, pdfData);
                 const pdfBytes = await highlightedPdfDoc.save();
                 const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
                 const pdfUrl = URL.createObjectURL(pdfBlob);

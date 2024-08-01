@@ -1,10 +1,12 @@
 export class ScriptLine {
-    constructor(text, x, y, endX, type = 'unknown') {
+    constructor(text, x, y, endX, height, type = 'unknown', speakingCharacter = null) {
         this.text = text;
         this.x = x;
         this.y = y;
         this.endX = endX;
+        this.height = height;
         this.type = type;
+        this.speakingCharacter = speakingCharacter;
     }
 }
 

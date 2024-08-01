@@ -4,10 +4,18 @@ function cleanCharacterName(name) {
     return name.split(/\s*\(/)[0].trim();
 }
 
-function calculateMedian(numbers) {
-    const sorted = numbers.slice().sort((a, b) => a - b);
-    const middle = Math.floor(sorted.length / 2);
-    return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+function calculateMode(numbers) {
+    let frequencyMap = {}
+    numbers.forEach((num) =>{ frequencyMap[num] = (frequencyMap[num] || 0) +1 })
+    let highestValue = 0
+    let mode = null
+    for (const key in frequencyMap) {
+        if (frequencyMap[key] >= highestValue){
+            highestValue = frequencyMap[key]
+            mode = key
+        }
+    }
+    return mode
 }
 
 async function calibratePDF(pdf, pdfjsLib, numPagesSample = 5) {
@@ -29,11 +37,10 @@ async function calibratePDF(pdf, pdfjsLib, numPagesSample = 5) {
             }
         });
     }
-
     return {
-        characterX: calculateMedian(characterXPositions),
-        parentheticalX: calculateMedian(parentheticalXPositions),
-        dialogueX: calculateMedian(dialogueXPositions)
+        characterX: calculateMode(characterXPositions),
+        parentheticalX: calculateMode(parentheticalXPositions),
+        dialogueX: calculateMode(dialogueXPositions)
     };
 }
 
@@ -50,16 +57,20 @@ export async function extractCharacters(pdfBuffer, pdfjsLib, pdfPageMap = new PD
         const textContent = await page.getTextContent();
         const lines = constructLineFromItems(textContent.items);
 
+        let currentCharacter = null;
         lines.forEach(line => {
             if (Math.abs(line.x - characterX) <= X_TOLERANCE) {
                 line.type = 'character';
                 const cleanedName = cleanCharacterName(line.text);
+                currentCharacter = cleanedName
                 characters.add(cleanedName);
             } else if (Math.abs(line.x - parentheticalX) <= X_TOLERANCE) {
                 line.type = 'parenthetical';
+                line.speakingCharacter = currentCharacter
             } else if (Math.abs(line.x - dialogueX) <= X_TOLERANCE) {
                 line.type = 'dialogue';
-            }
+                line.speakingCharacter = currentCharacter
+                }
         });
 
         pdfPageMap.setPageLines(pageNum, lines);
@@ -130,7 +141,7 @@ function constructLineFromItems(items) {
 
     return lines;
 }
-export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib) {
+export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib, pageMap) {
     const pdfBytes = await pdfDoc.save();
     const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
     const pdf = await loadingTask.promise;
@@ -140,62 +151,28 @@ export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib) {
 
     for (let i = 1; i <= numPages; i++) {
         const page = newPdfDoc.getPage(i - 1);
-        const pdfJsPage = await pdf.getPage(i);
-        const textContent = await pdfJsPage.getTextContent();
-        const { width, height } = page.getSize();
-        
-        let speakingCharacters = new Set();
+        const { height } = page.getSize();
+        const lines = pageMap.getPageLines(i) || [];
 
-        const sortedItems = textContent.items.sort((a, b) => b.transform[5] - a.transform[5]);
-
-        for (const item of sortedItems) {
-            const text = item.str.trim();
-
-            if (!text) continue;
-
-            // Check if this text is a character name
-            const matchingCharacter = characters.find(char => char.name.toUpperCase() === text.toUpperCase());
-            if (matchingCharacter) {
-                speakingCharacters.clear(); // Clear previous speaking characters
-                speakingCharacters.add(matchingCharacter);
-                continue;
-            }
-
-            // Highlight text for speaking characters
-            for (const character of speakingCharacters) {
-                if (text.toUpperCase() === text && text.length > 1) {
-                    speakingCharacters.delete(character);
-                } else if (text.startsWith("(") && text.endsWith(")")) {
-                    continue;
-                } else if (!/\w/.test(text)) {
-                    speakingCharacters.delete(character);
-                } else {
-                    const rect = {
-                        x: item.transform[4],
-                        y: item.transform[5],
-                        width: item.width,
-                        height: item.height,
-                    };
+        lines.forEach(line => {
+            if (line.type === 'dialogue' && line.speakingCharacter) {
+                const matchedCharacter = characters.find(c => c.name == line.speakingCharacter);
+                if (matchedCharacter) {
                     page.drawRectangle({
-                        ...rect,
-                        color: PDFLib.rgb(character.color.r, character.color.g, character.color.b),
-                        opacity: 0.3,
+                        x: line.x,
+                        y: line.y,  // top-left system
+                        width: line.endX - line.x,
+                        height: line.height || 10,  // Fallback if height isn't set
+                        color: PDFLib.rgb(...Object.values(matchedCharacter.color)),
+                        opacity: 0.3
                     });
                 }
             }
-
-            if (sortedItems.indexOf(item) < sortedItems.length - 1) {
-                const nextItem = sortedItems[sortedItems.indexOf(item) + 1];
-                if (Math.abs(nextItem.transform[5] - item.transform[5]) > item.height) {
-                    speakingCharacters.clear();
-                }
-            }
-        }
+        });
     }
 
     return newPdfDoc;
 }
-
 export async function generateHeatMap(pdfDoc, characterName, PDFLib, pdfjsLib) {
     const copiedPdfDoc = await PDFLib.PDFDocument.create();
     const pages = await copiedPdfDoc.copyPages(pdfDoc, pdfDoc.getPageIndices());
