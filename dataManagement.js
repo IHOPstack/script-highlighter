@@ -1,9 +1,10 @@
 export class ScriptLine {
-    constructor(text, x, y, type = 'unknown') {
+    constructor(text, x, y, endX, type = 'unknown') {
         this.text = text;
         this.x = x;
         this.y = y;
-        this.type = type;  // 'character', 'dialogue', 'other', or 'unknown'
+        this.endX = endX;
+        this.type = type;
     }
 }
 

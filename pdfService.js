@@ -1,7 +1,7 @@
 import { ScriptLine } from './dataManagement.js';
 
 function cleanCharacterName(name) {
-    return name.split(/\s*\(|\s{2,}/)[0].trim();
+    return name.split(/\s*\(/)[0].trim();
 }
 
 function calculateMedian(numbers) {
@@ -11,121 +11,125 @@ function calculateMedian(numbers) {
 }
 
 async function calibratePDF(pdf, pdfjsLib, numPagesSample = 5) {
-    let characterXPositions = [];
-    let dialogueXPositions = [];
+    let characterXPositions = [], parentheticalXPositions = [], dialogueXPositions = [];
 
     for (let i = 1; i <= Math.min(numPagesSample, pdf.numPages); i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
-        const lines = constructLineFromItems(textContent.items);  // This now returns ScriptLines automatically!
+        const lines = constructLineFromItems(textContent.items);
 
         lines.forEach((line, index) => {
-            const nextLine = lines[index + 1];
-            if (line.text === line.text.toUpperCase() && 
-                line.text.length < 30 && 
-                nextLine?.text !== nextLine?.text.toUpperCase()) {
+            const trimmedText = line.text.trim();
+            if (trimmedText === trimmedText.toUpperCase() && trimmedText.length < 30) {
                 characterXPositions.push(line.x);
-            } else if (index > 0 && 
-                       lines[index - 1].text === lines[index - 1].text.toUpperCase()) {
+            } else if (trimmedText.startsWith('(') && trimmedText.endsWith(')') && characterXPositions.includes(lines[index - 1]?.x)) {
+                parentheticalXPositions.push(line.x);
+            } else if (characterXPositions.includes(lines[index - 1]?.x) || parentheticalXPositions.includes(lines[index - 1]?.x)) {
                 dialogueXPositions.push(line.x);
             }
         });
     }
 
-    return { 
-        characterX: calculateMedian(characterXPositions), 
-        dialogueX: calculateMedian(dialogueXPositions) 
+    return {
+        characterX: calculateMedian(characterXPositions),
+        parentheticalX: calculateMedian(parentheticalXPositions),
+        dialogueX: calculateMedian(dialogueXPositions)
     };
 }
 
-export async function extractCharacters(pdfBuffer, pdfjsLib, pdfPageMap) {
+export async function extractCharacters(pdfBuffer, pdfjsLib, pdfPageMap = new PDFPageMap()) {
     const pdf = await pdfjsLib.getDocument(pdfBuffer).promise;
     const characters = new Set();
     const uncertainCharacters = new Set();
-    const xTolerance = 10;
+    const X_TOLERANCE = 0.005;
 
-    const { characterX, dialogueX } = await calibratePDF(pdf, pdfjsLib);
-    
-    for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
+    const { characterX, parentheticalX, dialogueX } = await calibratePDF(pdf, pdfjsLib);
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
         const textContent = await page.getTextContent();
         const lines = constructLineFromItems(textContent.items);
 
-        const typedLines = lines.map((line, index) => {
-            const nextLine = lines[index + 1];
-            if (Math.abs(line.x - characterX) < xTolerance) {
+        lines.forEach(line => {
+            if (Math.abs(line.x - characterX) <= X_TOLERANCE) {
                 line.type = 'character';
                 const cleanedName = cleanCharacterName(line.text);
-                if (nextLine && Math.abs(nextLine.x - dialogueX) < xTolerance) {
-                    characters.add(cleanedName);
-                } else {
-                    uncertainCharacters.add(cleanedName);
-                }
-            } else if (Math.abs(line.x - dialogueX) < xTolerance) {
+                characters.add(cleanedName);
+            } else if (Math.abs(line.x - parentheticalX) <= X_TOLERANCE) {
+                line.type = 'parenthetical';
+            } else if (Math.abs(line.x - dialogueX) <= X_TOLERANCE) {
                 line.type = 'dialogue';
-            } else {
-                line.type = 'action';
             }
-            return line;
         });
 
-        pdfPageMap.setPageLines(i, typedLines);
+        pdfPageMap.setPageLines(pageNum, lines);
     }
-
-    console.log("Total detected characters:", characters.size);
-    console.log("Total uncertain characters:", uncertainCharacters.size);
 
     return Array.from(characters).sort();
 }
-function sortItemsByVerticalPosition(items) {
-    // Top-to-Bottom, Left-to-Right
-    return items.sort((a, b) => {
-        const verticalDiff = b.transform[5] - a.transform[5];  // reverse-vertical
-        if (Math.abs(verticalDiff) > 2) return verticalDiff;   // If not on same line, use vertical
-        return a.transform[4] - b.transform[4];  // If on same line, Left-to-Right
-    });
+
+function getStandardSpaceWidth(items) {
+    // First, try to find a standalone space
+    const spaceItem = items.find(item => item.str.trim() === '' && item.str.length === 1);
+    if (spaceItem && spaceItem.width > 0) return spaceItem.width;
+
+    // If no standalone space, calculate using consecutive items
+    for (let i = 0; i < items.length - 1; i++) {
+        if (items[i].str.trim() && items[i+1].str.trim()) {  // Two consecutive non-empty items
+            const gap = items[i+1].transform[4] - (items[i].transform[4] + items[i].width);
+            if (gap > 0) return gap;  // If we found a positive gap, use it
+        }
+    }
+
+    // If all fails, default
+    return 7;  // Default
 }
 
 function constructLineFromItems(items) {
-    const sortedItems = sortItemsByVerticalPosition(items);
-    const lines = [];
-    let currentLine = {text: "", y: null, x: null};
+    const sortedItems = items.sort((a, b) => {
+        const verticalDiff = b.transform[5] - a.transform[5];
+        if (Math.abs(verticalDiff) > 2) return verticalDiff;
+        return a.transform[4] - b.transform[4];
+    });
 
-    const Y_THRESHOLD = 3;  
+    const standardSpaceWidth = getStandardSpaceWidth(sortedItems);
+    const MAX_WORD_GAP = standardSpaceWidth * 3;  
+    const MIN_WORD_GAP = standardSpaceWidth * 0.5;  // NEW: For tightly spaced PDFs
+
+
+    const lines = [];
+    let currentLine = {text: "", y: null, x: null, endX: null};
 
     for (const item of sortedItems) {
-        const {str, transform} = item;
-        const [x, y] = [transform[4], transform[5]];
+        const x = item.transform[4];
+        const y = item.transform[5];
+        const itemWidth = item.width || (item.str.length * standardSpaceWidth);
 
-        if (currentLine.y === null || Math.abs(y - currentLine.y) <= Y_THRESHOLD) {
-            currentLine.text += str + " ";
-            currentLine.y = y;
-            if (currentLine.x === null) currentLine.x = x;
-        } else {
+        const gap = currentLine.endX !== null ? x - currentLine.endX : 0;
+        const isNewVerticalLine = currentLine.y === null || Math.abs(y - currentLine.y) > 3;
+        const isHorizontalContinuation = !isNewVerticalLine && (gap <= MAX_WORD_GAP);
+
+        // Crucial: Don't append empty items or items that are just whitespace
+        const shouldAppendItem = item.str.trim().length > 0 || (gap >= MIN_WORD_GAP && gap <= MAX_WORD_GAP);
+
+        if (isNewVerticalLine || !isHorizontalContinuation) {
             if (currentLine.text.trim()) {
-                // NEW: construct ScriptLine instead of raw object
-                lines.push(new ScriptLine(
-                    currentLine.text.trim(), 
-                    currentLine.x, 
-                    currentLine.y
-                ));
+                lines.push(new ScriptLine(currentLine.text.trim(), currentLine.x, currentLine.y, currentLine.endX));
             }
-            currentLine = {text: str + " ", y: y, x: x};
+            currentLine = {text: item.str, y: y, x: x, endX: x + itemWidth};
+        } else if (shouldAppendItem) {
+            const addSpace = gap >= MIN_WORD_GAP ? ' ' : '';
+            currentLine.text += addSpace + item.str;
+            currentLine.endX = x + itemWidth;
         }
     }
 
     if (currentLine.text.trim()) {
-        // NEW: construct ScriptLine for last line as well
-        lines.push(new ScriptLine(
-            currentLine.text.trim(), 
-            currentLine.x, 
-            currentLine.y
-        ));
+        lines.push(new ScriptLine(currentLine.text.trim(), currentLine.x, currentLine.y, currentLine.endX));
     }
 
     return lines;
 }
-
 export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib) {
     const pdfBytes = await pdfDoc.save();
     const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
@@ -149,14 +153,11 @@ export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib) {
 
             if (!text) continue;
 
-            console.log(`Text: "${text}", Position: (${item.transform[4]}, ${item.transform[5]}), Size: ${item.width}x${item.height}`);
-
             // Check if this text is a character name
             const matchingCharacter = characters.find(char => char.name.toUpperCase() === text.toUpperCase());
             if (matchingCharacter) {
                 speakingCharacters.clear(); // Clear previous speaking characters
                 speakingCharacters.add(matchingCharacter);
-                console.log(`Character ${matchingCharacter.name} starts speaking`);
                 continue;
             }
 
@@ -164,9 +165,7 @@ export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib) {
             for (const character of speakingCharacters) {
                 if (text.toUpperCase() === text && text.length > 1) {
                     speakingCharacters.delete(character);
-                    console.log(`Character ${character.name} stops speaking`);
                 } else if (text.startsWith("(") && text.endsWith(")")) {
-                    console.log('Parenthetical, skipping');
                     continue;
                 } else if (!/\w/.test(text)) {
                     speakingCharacters.delete(character);
@@ -177,7 +176,6 @@ export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib) {
                         width: item.width,
                         height: item.height,
                     };
-                    console.log(`Highlighting for ${character.name} with color:`, character.color);
                     page.drawRectangle({
                         ...rect,
                         color: PDFLib.rgb(character.color.r, character.color.g, character.color.b),
