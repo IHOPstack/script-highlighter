@@ -8,6 +8,26 @@ export class ScriptLine {
         this.type = type;
         this.speakingCharacter = speakingCharacter;
     }
+
+    width() {
+        return this.endX - this.x;
+    }
+
+    isDialogue() {
+        return this.type === "dialogue";
+    }
+
+    hasCharacter() {
+        return !!this.speakingCharacter;
+    }
+
+    isCharacter() {
+        return this.type === "character";
+    }
+
+    isParenthetical() {
+        return this.type === "parenthetical";
+    }
 }
 
 export class PDFPageMap {

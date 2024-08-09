@@ -145,25 +145,27 @@ export async function highlightPDF(pdfDoc, characters, PDFLib, pdfjsLib, pageMap
     const pdfBytes = await pdfDoc.save();
     const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
     const pdf = await loadingTask.promise;
-    const numPages = pdf.numPages;
-
     const newPdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
 
-    for (let i = 1; i <= numPages; i++) {
-        const page = newPdfDoc.getPage(i - 1);
+    const numPages = pdf.numPages;
+    const pages = newPdfDoc.getPages();
+
+    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        const page = pages[pageNum - 1];
         const { height } = page.getSize();
-        const lines = pageMap.getPageLines(i) || [];
+        const lines = pageMap.getPageLines(pageNum) || [];
 
         lines.forEach(line => {
-            if (line.type === 'dialogue' && line.speakingCharacter) {
-                const matchedCharacter = characters.find(c => c.name == line.speakingCharacter);
+            if (line.isDialogue()) {
+                const matchedCharacter = characters.find(c => c.name === line.speakingCharacter);
                 if (matchedCharacter) {
+                    const { r, g, b } = matchedCharacter.color;
                     page.drawRectangle({
                         x: line.x,
-                        y: line.y,  // top-left system
-                        width: line.endX - line.x,
-                        height: line.height || 10,  // Fallback if height isn't set
-                        color: PDFLib.rgb(...Object.values(matchedCharacter.color)),
+                        y: line.y,
+                        width: line.width(),
+                        height: line.height || 10,
+                        color: PDFLib.rgb(r, g, b),
                         opacity: 0.3
                     });
                 }
