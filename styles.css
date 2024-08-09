@@ -97,6 +97,8 @@ h1 {
 
 #previewArea {
     border: 1px solid #ccc;
+    margin-top: 20px;
+    margin-bottom: 20px;
     padding: 20px;
     min-height: 300px;
     max-height: 500px;
