@@ -74,6 +74,19 @@ document.addEventListener('DOMContentLoaded', function() {
         uiManager.updateUI();
     });
 
+    downloadBtn.addEventListener('click', function() {
+        const iframe = previewArea.querySelector('iframe');
+        if (iframe) {
+            const link = document.createElement('a');
+            link.href = iframe.src;
+            link.download = 'highlighted_script.pdf';
+            link.click();
+        } else {
+            alert('Please highlight a script first.');
+        }
+    });
+
+
     const characterContainer = document.getElementById('characterContainer');
     
     characterContainer.addEventListener('click', (e) => {

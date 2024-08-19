@@ -17,18 +17,19 @@ function calculateMode(numbers) {
     }
     return mode
 }
-
-async function calibratePDF(pdf, pdfjsLib, numPagesSample = 5) {
+// Remove export once tested
+export async function calibratePDF(pdf, pdfjsLib, numPagesSample = 5) {
     let characterXPositions = [], parentheticalXPositions = [], dialogueXPositions = [];
 
     for (let i = 1; i <= Math.min(numPagesSample, pdf.numPages); i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
         const lines = constructLineFromItems(textContent.items);
+        const character_line_length = 10 // We want to 
 
         lines.forEach((line, index) => {
             const trimmedText = line.text.trim();
-            if (trimmedText === trimmedText.toUpperCase() && trimmedText.length < 30) {
+            if (trimmedText === trimmedText.toUpperCase() && !trimmedText.includes('.')) {
                 characterXPositions.push(line.x);
             } else if (trimmedText.startsWith('(') && trimmedText.endsWith(')') && characterXPositions.includes(lines[index - 1]?.x)) {
                 parentheticalXPositions.push(line.x);
