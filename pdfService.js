@@ -25,7 +25,6 @@ export async function calibratePDF(pdf, pdfjsLib, numPagesSample = 5) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
         const lines = constructLineFromItems(textContent.items);
-        const character_line_length = 10 // We want to 
 
         lines.forEach((line, index) => {
             const trimmedText = line.text.trim();
@@ -52,7 +51,6 @@ export async function extractCharacters(pdfBuffer, pdfjsLib, pdfPageMap = new PD
     const X_TOLERANCE = 0.005;
 
     const { characterX, parentheticalX, dialogueX } = await calibratePDF(pdf, pdfjsLib);
-
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
         const textContent = await page.getTextContent();
@@ -80,23 +78,6 @@ export async function extractCharacters(pdfBuffer, pdfjsLib, pdfPageMap = new PD
     return Array.from(characters).sort();
 }
 
-function getStandardSpaceWidth(items) {
-    // First, try to find a standalone space
-    const spaceItem = items.find(item => item.str.trim() === '' && item.str.length === 1);
-    if (spaceItem && spaceItem.width > 0) return spaceItem.width;
-
-    // If no standalone space, calculate using consecutive items
-    for (let i = 0; i < items.length - 1; i++) {
-        if (items[i].str.trim() && items[i+1].str.trim()) {  // Two consecutive non-empty items
-            const gap = items[i+1].transform[4] - (items[i].transform[4] + items[i].width);
-            if (gap > 0) return gap;  // If we found a positive gap, use it
-        }
-    }
-
-    // If all fails, default
-    return 7;  // Default
-}
-
 function constructLineFromItems(items) {
     const sortedItems = items.sort((a, b) => {
         const verticalDiff = b.transform[5] - a.transform[5];
@@ -104,9 +85,9 @@ function constructLineFromItems(items) {
         return a.transform[4] - b.transform[4];
     });
 
-    const standardSpaceWidth = getStandardSpaceWidth(sortedItems);
+    const standardSpaceWidth = 7; // Standard space width across most documents
     const MAX_WORD_GAP = standardSpaceWidth * 3;  
-    const MIN_WORD_GAP = standardSpaceWidth * 0.5;  // NEW: For tightly spaced PDFs
+    const MIN_WORD_GAP = standardSpaceWidth * 0.5;
 
 
     const lines = [];

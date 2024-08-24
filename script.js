@@ -10,21 +10,17 @@ const HIGHLIGHT_COLORS = {
     orange: { hex: '#ff9b00', rgb: {r: 1, g: 0.61, b: 0} },
     purple: { hex: '#cb5eff', rgb: {r: 0.8, g: 0.37, b: 1} }
 };
-
 document.addEventListener('DOMContentLoaded', function() {
     const characterSetManager = new CharacterSetManager();
     const uiManager = new UIManager(characterSetManager, HIGHLIGHT_COLORS);
     const pdfData = new PDFPageMap();
-
     const uploadBtn = document.getElementById('uploadBtn');
     const highlightBtn = document.getElementById('highlightBtn');
     const previewArea = document.getElementById('previewArea');
     const downloadBtn = document.getElementById('downloadBtn');
-    const editBtn = document.getElementById('editBtn');
+    // const editBtn = document.getElementById('editBtn');
     const addCharacterBtn = document.getElementById('addCharacterBtn');
-    
     let currentPdfDoc = null;
-
     uploadBtn.addEventListener('click', async function() {
         const input = document.createElement('input');
         input.type = 'file';
@@ -46,13 +42,11 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         input.click();
     });
-
     highlightBtn.addEventListener('click', async function() {
         const characters = characterSetManager.sets.filter(set => set.character).map(set => ({
             name: set.character,
             color: HIGHLIGHT_COLORS[set.color].rgb
         }));
-        
         if (characters.length > 0 && currentPdfDoc) {
             try {
                 const highlightedPdfDoc = await highlightPDF(currentPdfDoc, characters, PDFLib, pdfjsLib, pdfData);
@@ -68,12 +62,10 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please select at least one character and upload a script first.');
         }
     });
-
     addCharacterBtn.addEventListener('click', () => {
         characterSetManager.addSet();
         uiManager.updateUI();
     });
-
     downloadBtn.addEventListener('click', function() {
         const iframe = previewArea.querySelector('iframe');
         if (iframe) {
@@ -85,10 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please highlight a script first.');
         }
     });
-
-
-    const characterContainer = document.getElementById('characterContainer');
-    
+    const characterContainer = document.getElementById('characterContainer');  
     characterContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('color-option') || e.target.closest('.color-option')) {
             const colorOption = e.target.classList.contains('color-option') ? e.target : e.target.closest('.color-option');
@@ -100,7 +89,6 @@ document.addEventListener('DOMContentLoaded', function() {
             uiManager.updateUI();
         }
     });
-
     characterContainer.addEventListener('change', (e) => {
         if (e.target.classList.contains('characterSelect')) {
             const characterSet = e.target.closest('.character-set');
@@ -110,37 +98,34 @@ document.addEventListener('DOMContentLoaded', function() {
             uiManager.updateUI();
         }
     });
-
-    editBtn.addEventListener('click', async function() {
-        if (currentPdfDoc && characterSetManager.sets.length > 0) {
-            try {
-                const heatMapPdf = await generateHeatMap(currentPdfDoc, characterSetManager.sets[0].character, PDFLib, pdfjsLib);
-                const pdfBytes = await heatMapPdf.save();
-                const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
-                const pdfUrl = URL.createObjectURL(pdfBlob);
+    // editBtn.addEventListener('click', async function() {
+    //     if (currentPdfDoc && characterSetManager.sets.length > 0) {
+    //         try {
+    //             const heatMapPdf = await generateHeatMap(currentPdfDoc, characterSetManager.sets[0].character, PDFLib, pdfjsLib);
+    //             const pdfBytes = await heatMapPdf.save();
+    //             const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+    //             const pdfUrl = URL.createObjectURL(pdfBlob);
                 
-                const heatMapDiv = document.createElement('div');
-                heatMapDiv.innerHTML = `
-                    <h3>Heat Map for ${characterSetManager.sets[0].character}</h3>
-                    <iframe src="${pdfUrl}" width="100%" height="500px"></iframe>
-                `;
+    //             const heatMapDiv = document.createElement('div');
+    //             heatMapDiv.innerHTML = `
+    //                 <h3>Heat Map for ${characterSetManager.sets[0].character}</h3>
+    //                 <iframe src="${pdfUrl}" width="100%" height="500px"></iframe>
+    //             `;
                 
-                const existingHeatMap = document.getElementById('heatMapSection');
-                if (existingHeatMap) {
-                    existingHeatMap.remove();
-                }
+    //             const existingHeatMap = document.getElementById('heatMapSection');
+    //             if (existingHeatMap) {
+    //                 existingHeatMap.remove();
+    //             }
                 
-                heatMapDiv.id = 'heatMapSection';
-                document.body.appendChild(heatMapDiv);
-            } catch (error) {
-                console.error('Heat map generation failed:', error);
-                alert('Heat map generation failed. Please try again.');
-            }
-        } else {
-            alert('Please select a character and upload a script first.');
-        }
-    });
-
-    // Initial UI update
+    //             heatMapDiv.id = 'heatMapSection';
+    //             document.body.appendChild(heatMapDiv);
+    //         } catch (error) {
+    //             console.error('Heat map generation failed:', error);
+    //             alert('Heat map generation failed. Please try again.');
+    //         }
+    //     } else {
+    //         alert('Please select a character and upload a script first.');
+    //     }
+    // });
     uiManager.updateUI();
 });
