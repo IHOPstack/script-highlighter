@@ -244,3 +244,16 @@ h1 {
     font-size: 12px;
     border-radius: 5px;
 }
+
+.sample-script-links {
+    background-color: var(--background-color);
+    margin-right: 20px;
+}
+
+a {
+    color: var(--text-color);
+}
+
+a:visited {
+    color: var(--highlighter-yellow);
+}
