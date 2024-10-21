@@ -1,16 +1,16 @@
-import { extractCharacters, highlightPDF, generateHeatMap } from './pdfService.js';
+import { CharacterSetManager, PDFPageMap } from './dataManagement.js';
+import { extractCharacters, highlightPDF } from './pdfService.js';
 import { UIManager } from './uiManager.js';
-import { PDFPageMap, CharacterSetManager } from './dataManagement.js';
 
 const HIGHLIGHT_COLORS = {
-    yellow: { hex: '#ffff00', rgb: {r: 1, g: 1, b: 0} },
-    pink: { hex: '#ff6bff', rgb: {r: 1, g: 0.42, b: 1} },
-    blue: { hex: '#1ac7ff', rgb: {r: 0.1, g: 0.78, b: 1} },
-    green: { hex: '#51ff00', rgb: {r: 0.32, g: 1, b: 0} },
-    orange: { hex: '#ff9b00', rgb: {r: 1, g: 0.61, b: 0} },
-    purple: { hex: '#cb5eff', rgb: {r: 0.8, g: 0.37, b: 1} }
+    yellow: { hex: '#ffff00', rgb: { r: 1, g: 1, b: 0 } },
+    pink: { hex: '#ff6bff', rgb: { r: 1, g: 0.42, b: 1 } },
+    blue: { hex: '#1ac7ff', rgb: { r: 0.1, g: 0.78, b: 1 } },
+    green: { hex: '#51ff00', rgb: { r: 0.32, g: 1, b: 0 } },
+    orange: { hex: '#ff9b00', rgb: { r: 1, g: 0.61, b: 0 } },
+    purple: { hex: '#cb5eff', rgb: { r: 0.8, g: 0.37, b: 1 } }
 };
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const characterSetManager = new CharacterSetManager();
     const uiManager = new UIManager(characterSetManager, HIGHLIGHT_COLORS);
     const pdfData = new PDFPageMap();
@@ -21,11 +21,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // const editBtn = document.getElementById('editBtn');
     const addCharacterBtn = document.getElementById('addCharacterBtn');
     let currentPdfDoc = null;
-    uploadBtn.addEventListener('click', async function() {
+    uploadBtn.addEventListener('click', async function () {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.pdf';
-        input.onchange = async function(event) {
+        input.onchange = async function (event) {
             const file = event.target.files[0];
             if (file) {
                 try {
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         input.click();
     });
-    highlightBtn.addEventListener('click', async function() {
+    highlightBtn.addEventListener('click', async function () {
         const characters = characterSetManager.sets.filter(set => set.character).map(set => ({
             name: set.character,
             color: HIGHLIGHT_COLORS[set.color].rgb
@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const pdfBytes = await highlightedPdfDoc.save();
                 const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
                 const pdfUrl = URL.createObjectURL(pdfBlob);
+                console.log("IRL:", pdfUrl);
                 previewArea.innerHTML = `<iframe src="${pdfUrl}" width="100%" height="500px"></iframe>`;
             } catch (error) {
                 console.error('Highlighting failed:', error);
@@ -66,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
         characterSetManager.addSet();
         uiManager.updateUI();
     });
-    downloadBtn.addEventListener('click', function() {
+    downloadBtn.addEventListener('click', function () {
         const iframe = previewArea.querySelector('iframe');
         if (iframe) {
             const link = document.createElement('a');
@@ -77,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please highlight a script first.');
         }
     });
-    const characterContainer = document.getElementById('characterContainer');  
+    const characterContainer = document.getElementById('characterContainer');
     characterContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('color-option') || e.target.closest('.color-option')) {
             const colorOption = e.target.classList.contains('color-option') ? e.target : e.target.closest('.color-option');
@@ -105,18 +106,18 @@ document.addEventListener('DOMContentLoaded', function() {
     //             const pdfBytes = await heatMapPdf.save();
     //             const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
     //             const pdfUrl = URL.createObjectURL(pdfBlob);
-                
+
     //             const heatMapDiv = document.createElement('div');
     //             heatMapDiv.innerHTML = `
     //                 <h3>Heat Map for ${characterSetManager.sets[0].character}</h3>
     //                 <iframe src="${pdfUrl}" width="100%" height="500px"></iframe>
     //             `;
-                
+
     //             const existingHeatMap = document.getElementById('heatMapSection');
     //             if (existingHeatMap) {
     //                 existingHeatMap.remove();
     //             }
-                
+
     //             heatMapDiv.id = 'heatMapSection';
     //             document.body.appendChild(heatMapDiv);
     //         } catch (error) {
@@ -129,3 +130,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // });
     uiManager.updateUI();
 });
+
+document.getElementById("feedback").addEventListener(openFeedback);
+
+function openFeedback() {
+    document.getElementById("feedback-form")
+}

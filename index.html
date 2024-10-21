@@ -1,79 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Script Highlighter</title>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-        <link rel="stylesheet" href="styles.css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
-        <script>
-            window.pdfjsLib = window['pdfjs-dist/build/pdf'];
-            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.worker.min.js';
-        </script>
-        <link rel="icon" href="https://devinbeckwith.netlify.app/images/favicon.ico">
-    </head>
-    <body>
-        <div class="container">
-            <header>
-                <h1>Script Highlighter</h1>
-                <div class="ad-space">Ad Space</div>
-            </header>
-            <main>
-                <section class="info">
-                    <div class="description">
-                        <p>Script Highlighter allows you to upload a script and download a copy with the lines of your chosen character(s) highlighted.</p>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Highlighter</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+    <script>
+        window.pdfjsLib = window['pdfjs-dist/build/pdf'];
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.worker.min.js';
+    </script>
+    <link rel="icon" href="https://devinbeckwith.netlify.app/images/favicon.ico">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Script Highlighter</h1>
+            <button id="feedback">Feedback</button>
+            <dialog id="feedback-form">
+                <form method="dialog" netlify>
+                    <div class="form-field">
+                        <label for="name">Name:</label>
+                        <input type="text" name="name" id="name">
                     </div>
-                    <div class="steps">
-                        <h2>How to use:</h2>
-                        <ol>
-                            <li>Click the 'Upload' button to select your script file (PDF only for now).</li>
-                            <li>Choose a character from the dropdown list.</li>
-                            <li>Click 'Highlight Script' to highlight the chosen character's lines.</li>
-                            <li>Review the highlighted script in the preview area.</li>
-                            <li>Click 'Download' to save the highlighted script to your device.</li>
-                        </ol>
+                    <div class="form-field">
+                        <label for="message">Message:</label>
+                        <input type="text" name="message" id="message">
                     </div>
-                    <div class="description">
-                    </div>
-                </section>
-                <div class="ad-space-horizontal">Ad Space</div>
-                <section class="actions">
-                    <div id="characterContainer">
-                        <!-- Additional character sets will be inserted here -->
-                    </div>
-                    <div class="main-buttons">
-                        <button id="uploadBtn" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
-                        <button id="highlightBtn" class="btn btn-highlight"><i class="fas fa-highlighter"></i> Highlight Script</button>
-                        <button id="addCharacterBtn" class="btn btn-secondary"><i class="fas fa-plus"></i> Add Character</button>
-                    </div>
-                </section>                                                                                              
-                <section class="preview">
-                    <div id="previewArea">Highlighted script will appear here.</div>
-                </section>
-                <section class="main-buttons">
-                    <button id="downloadBtn" class="btn btn-primary"><i class="fas fa-download"></i> Download</button>
-                    <!-- <button id="editBtn" class="btn btn-tertiary"><i class="fas fa-pencil-alt"></i> Edit Highlights</button> -->
-                </section>
-                <h2>Don't have a script but want to test the functionality? Try one of mine!</h2>
-                <div class="sample-script-links">
-                    <a href="/sample_scripts/Something_Stupid_-_FINAL_JUNE_10 3.00.38 PM.pdf" download>Something Stupid (Play)</a>
-                    <a href="/sample_scripts/I_Think_You_Should_Leave_Spec.pdf" download>I Think You Should Leave (TV)</a>
-                    <a href="/sample_scripts/SpongeBob_SquarePants_Sample.pdf" download>SpongeBob Spec (TV)</a>
+                </form>
+            </dialog>
+        </header>
+        <main>
+            <section class="info">
+                <div class="description">
+                    <p>Script Highlighter allows you to upload a script and download a copy with the lines of your
+                        chosen character(s) highlighted.</p>
                 </div>
-                <p>Just select the script and then hit upload!</p>
-                <section class="info">
-                    <h2>Is it safe?</h2>
-                    <ul>
-                        <li>YES!</li>
-                        <li>All highlighting is done in the browser so no other entity will obtain a copy of your script due to your use of this website.</li>
-                        <li>I'm a writer too, I get it.</li>
-                        <li>The file downloaded is an exact copy of your uploaded pdf with the exception of the highlights rendered on top.</li>
-                    </ul>
-                </section>
-            </main>
-        </div>
-        <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-        <script type="module" src="script.js"></script>
-    </body>
+                <div class="steps">
+                    <h2>How to use:</h2>
+                    <ol>
+                        <li>Click the 'Upload' button to select your script file (PDF only for now).</li>
+                        <li>Choose a character from the dropdown list.</li>
+                        <li>Click 'Highlight Script' to highlight the chosen character's lines.</li>
+                        <li>Review the highlighted script in the preview area.</li>
+                        <li>Click 'Download' to save the highlighted script to your device.</li>
+                    </ol>
+                </div>
+                <div class="description">
+                </div>
+            </section>
+            <div class="ad-space-horizontal">Ad Space</div>
+            <section class="actions">
+                <div id="characterContainer">
+                    <!-- Additional character sets will be inserted here -->
+                </div>
+                <div class="main-buttons">
+                    <button id="uploadBtn" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+                    <button id="highlightBtn" class="btn btn-highlight"><i class="fas fa-highlighter"></i> Highlight
+                        Script</button>
+                    <button id="addCharacterBtn" class="btn btn-secondary"><i class="fas fa-plus"></i> Add
+                        Character</button>
+                </div>
+            </section>
+            <section class="preview">
+                <div id="previewArea">Highlighted script will appear here.</div>
+            </section>
+            <section class="main-buttons">
+                <button id="downloadBtn" class="btn btn-primary"><i class="fas fa-download"></i> Download</button>
+                <!-- <button id="editBtn" class="btn btn-tertiary"><i class="fas fa-pencil-alt"></i> Edit Highlights</button> -->
+            </section>
+            <h2>Don't have a script but want to test the functionality? Try one of mine!</h2>
+            <div class="sample-script-links">
+                <a href="/sample_scripts/Something_Stupid_-_FINAL_JUNE_10 3.00.38 PM.pdf" download>Something Stupid
+                    (Play)</a>
+                <a href="/sample_scripts/I_Think_You_Should_Leave_Spec.pdf" download>I Think You Should Leave (TV)</a>
+                <a href="/sample_scripts/SpongeBob_SquarePants_Sample.pdf" download>SpongeBob Spec (TV)</a>
+            </div>
+            <p>Just select the script and then hit upload!</p>
+            <section class="info">
+                <h2>Is it safe?</h2>
+                <ul>
+                    <li>YES!</li>
+                    <li>All highlighting is done in the browser so no other entity will obtain a copy of your script due
+                        to your use of this website.</li>
+                    <li>The file downloaded is an exact copy of your uploaded pdf with the exception of the highlights
+                        rendered on top.</li>
+                </ul>
+                <h2>Known Issues.</h2>
+                <ul>
+                    <li>
+                        I have yet to find a way to display pdfs on mobile without also making those pdfs publicly
+                        available
+                    </li>
+                    <li>
+                        I want to add a greyscale highlight color to accommodate B&W printing.
+                    </li>
+                    <li>
+                        Need to add capability of creating multiple pdfs at once i.e. create a copy of highlighted
+                        scripts for each character.
+                    </li>
+                </ul>
+            </section>
+        </main>
+    </div>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script type="module" src="script.js"></script>
+</body>
+
 </html>
