@@ -6,20 +6,20 @@ function cleanCharacterName(name) {
 
 function calculateMode(numbers) {
     let frequencyMap = {}
-    numbers.forEach((num) =>{ frequencyMap[num] = (frequencyMap[num] || 0) +1 })
+    numbers.forEach((num) => { frequencyMap[num] = (frequencyMap[num] || 0) + 1 })
     let highestValue = 0
     let mode = null
     for (const key in frequencyMap) {
-        if (frequencyMap[key] >= highestValue){
+        if (frequencyMap[key] >= highestValue) {
             highestValue = frequencyMap[key]
             mode = key
         }
     }
     return mode
 }
-// Remove export once tested
-export async function calibratePDF(pdf, pdfjsLib, numPagesSample = 5) {
+export async function calibratePDF(pdf, pdfjsLib, numPagesSample = Math.max(5, pdf.numPages / 10)) {
     let characterXPositions = [], parentheticalXPositions = [], dialogueXPositions = [];
+    console.log('calibrating');
 
     for (let i = 1; i <= Math.min(numPagesSample, pdf.numPages); i++) {
         const page = await pdf.getPage(i);
@@ -30,6 +30,7 @@ export async function calibratePDF(pdf, pdfjsLib, numPagesSample = 5) {
             const trimmedText = line.text.trim();
             if (trimmedText === trimmedText.toUpperCase() && !trimmedText.includes('.')) {
                 characterXPositions.push(line.x);
+                console.log('character line: ', line.text);
             } else if (trimmedText.startsWith('(') && trimmedText.endsWith(')') && characterXPositions.includes(lines[index - 1]?.x)) {
                 parentheticalXPositions.push(line.x);
             } else if (characterXPositions.includes(lines[index - 1]?.x) || parentheticalXPositions.includes(lines[index - 1]?.x)) {
@@ -45,6 +46,7 @@ export async function calibratePDF(pdf, pdfjsLib, numPagesSample = 5) {
 }
 
 export async function extractCharacters(pdfBuffer, pdfjsLib, pdfPageMap = new PDFPageMap()) {
+    console.log('extracting');
     const pdf = await pdfjsLib.getDocument(pdfBuffer).promise;
     const characters = new Set();
     const uncertainCharacters = new Set();
@@ -69,7 +71,7 @@ export async function extractCharacters(pdfBuffer, pdfjsLib, pdfPageMap = new PD
             } else if (Math.abs(line.x - dialogueX) <= X_TOLERANCE) {
                 line.type = 'dialogue';
                 line.speakingCharacter = currentCharacter
-                }
+            }
         });
 
         pdfPageMap.setPageLines(pageNum, lines);
@@ -86,12 +88,12 @@ function constructLineFromItems(items) {
     });
 
     const standardSpaceWidth = 7; // Standard space width across most documents
-    const MAX_WORD_GAP = standardSpaceWidth * 3;  
+    const MAX_WORD_GAP = standardSpaceWidth * 3;
     const MIN_WORD_GAP = standardSpaceWidth * 0.5;
 
 
     const lines = [];
-    let currentLine = {text: "", y: null, x: null, endX: null};
+    let currentLine = { text: "", y: null, x: null, endX: null };
 
     for (const item of sortedItems) {
         const x = item.transform[4];
@@ -109,7 +111,7 @@ function constructLineFromItems(items) {
             if (currentLine.text.trim()) {
                 lines.push(new ScriptLine(currentLine.text.trim(), currentLine.x, currentLine.y, currentLine.endX));
             }
-            currentLine = {text: item.str, y: y, x: x, endX: x + itemWidth};
+            currentLine = { text: item.str, y: y, x: x, endX: x + itemWidth };
         } else if (shouldAppendItem) {
             const addSpace = gap >= MIN_WORD_GAP ? ' ' : '';
             currentLine.text += addSpace + item.str;
@@ -168,7 +170,7 @@ export async function generateHeatMap(pdfDoc, characterName, PDFLib, pdfjsLib) {
         const page = copiedPdfDoc.getPage(i);
         const pdfJsPage = await pdfJsDoc.getPage(i + 1);
         const textContent = await pdfJsPage.getTextContent();
-        
+
         let lineCount = 0;
         let isCharacterSpeaking = false;
 
