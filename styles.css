@@ -1,11 +1,11 @@
-:root{
+:root {
     --background-color: #f6eee3;
     --text-color: black;
     --highlighter-yellow: #ffff00;
 }
 
 @media (prefers-color-scheme: dark) {
-    :root{
+    :root {
         --background-color: black;
         --text-color: #f6eee3;
     }
@@ -84,7 +84,6 @@ h1 {
     font-size: 14px;
 }
 
-#characterSelect,
 .characterSelect {
     font-family: 'Courier New', Courier, monospace;
     padding: 10px;
@@ -93,6 +92,7 @@ h1 {
     font-size: 16px;
     background-color: var(--background-color);
     color: var(--text-color);
+    cursor: pointer;
 }
 
 #previewArea {
@@ -140,25 +140,60 @@ h1 {
 }
 
 /* Updated Sharpie-like fluorescent colors */
-#yellow i { color: #ffff00; }
-#pink i { color: #ff6bff; }
-#blue i { color: #1ac7ff; }
-#green i { color: #51ff00; }
-#orange i { color: #ff9b00; }
-#purple i { color: #cb5eff; }
+#yellow i {
+    color: #ffff00;
+}
 
-#yellow.selected::after { border-color: #ffff00; }
-#pink.selected::after { border-color: #ff6bff; }
-#blue.selected::after { border-color: #1ac7ff; }
-#green.selected::after { border-color: #51ff00; }
-#orange.selected::after { border-color: #ff9b00; }
-#purple.selected::after { border-color: #cb5eff; }
+#pink i {
+    color: #ff6bff;
+}
+
+#blue i {
+    color: #1ac7ff;
+}
+
+#green i {
+    color: #51ff00;
+}
+
+#orange i {
+    color: #ff9b00;
+}
+
+#purple i {
+    color: #cb5eff;
+}
+
+#yellow.selected::after {
+    border-color: #ffff00;
+}
+
+#pink.selected::after {
+    border-color: #ff6bff;
+}
+
+#blue.selected::after {
+    border-color: #1ac7ff;
+}
+
+#green.selected::after {
+    border-color: #51ff00;
+}
+
+#orange.selected::after {
+    border-color: #ff9b00;
+}
+
+#purple.selected::after {
+    border-color: #cb5eff;
+}
 
 .btn-highlight {
     background-color: var(--highlighter-yellow);
     color: black;
     font-size: 14px;
 }
+
 .actions {
     display: flex;
     flex-direction: column;
@@ -187,6 +222,7 @@ h1 {
     display: flex;
     gap: 10px;
 }
+
 .remove-character-btn {
     background-color: #ff4d4d;
     color: white;
@@ -201,6 +237,7 @@ h1 {
     background-color: #6c757d;
     color: white;
 }
+
 .color-options {
     display: flex;
     gap: 5px;
@@ -256,4 +293,39 @@ a {
 
 a:visited {
     color: var(--highlighter-yellow);
+}
+
+#feedback-form {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+form {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+}
+
+form * {
+    color: var(--text-color);
+    background-color: var(--background-color);
+}
+
+form input,
+textarea {
+    border: 1px solid var(--text-color);
+    border-radius: 5px;
+}
+
+.form-message {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+form button {
+    cursor: pointer;
 }

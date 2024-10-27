@@ -131,8 +131,8 @@ document.addEventListener('DOMContentLoaded', function () {
     uiManager.updateUI();
 });
 
-document.getElementById("feedback").addEventListener(openFeedback);
+document.getElementById("feedback").addEventListener("click", openFeedback);
 
 function openFeedback() {
-    document.getElementById("feedback-form")
+    document.getElementById("feedback-form").showModal();
 }

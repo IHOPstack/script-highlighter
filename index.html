@@ -19,17 +19,20 @@
     <div class="container">
         <header>
             <h1>Script Highlighter</h1>
-            <button id="feedback">Feedback</button>
+            <button class="characterSelect" id="feedback">Feedback</button>
             <dialog id="feedback-form">
                 <form method="dialog" netlify>
-                    <div class="form-field">
+                    <div class="form-info">
                         <label for="name">Name:</label>
                         <input type="text" name="name" id="name">
+                        <label for="email">Email:</label>
+                        <input type="text" name="email" id="email">
                     </div>
-                    <div class="form-field">
+                    <div class="form-message">
                         <label for="message">Message:</label>
-                        <input type="text" name="message" id="message">
+                        <textarea name="message" id="message" cols="47" rows="5"></textarea>
                     </div>
+                    <button type="submit">Send</button>
                 </form>
             </dialog>
         </header>
